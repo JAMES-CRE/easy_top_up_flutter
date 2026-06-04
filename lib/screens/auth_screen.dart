@@ -373,7 +373,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                   ? 'Login'
                                   : _selectedRole == 'operator'
                                       ? 'Sign Up as Operator'
-                                      : 'Sign Up as Driver',
+                                      : 'Sign Up as Normal User',
                               style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
