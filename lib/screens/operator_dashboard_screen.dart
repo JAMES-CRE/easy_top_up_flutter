@@ -625,7 +625,7 @@ Widget _buildActionsCard() {
       ],
     ),
     child: Column(children: [
-      // MARK AS OPEN/CLOSED (Keep this)
+    
       _actionTile(
         icon: isOpenOrAvailable ? Icons.lock_outline : Icons.lock_open_outlined,
         iconColor: isOpenOrAvailable ? Colors.red : Colors.green,
