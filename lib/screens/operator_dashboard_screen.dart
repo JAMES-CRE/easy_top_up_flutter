@@ -545,7 +545,7 @@ class _OperatorDashboardScreenState extends State<OperatorDashboardScreen> {
     );
   }
 
-  Widget _buildActionsCard() {
+  /*Widget _buildActionsCard() {
     final stationType = _station != null ? (_station!['type'] ?? '') : '';
     final stationStatus = _station != null ? (_station!['status'] ?? '') : '';
     final isOpenOrAvailable = (stationStatus == 'Open' || stationStatus == 'Available');
@@ -608,7 +608,60 @@ class _OperatorDashboardScreenState extends State<OperatorDashboardScreen> {
         ),
       ]),
     );
-  }
+  }*/
+
+
+
+Widget _buildActionsCard() {
+  final stationStatus = _station != null ? (_station!['status'] ?? '') : '';
+  final isOpenOrAvailable = (stationStatus == 'Open' || stationStatus == 'Available');
+
+  return Container(
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      boxShadow: const [
+        BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 2)),
+      ],
+    ),
+    child: Column(children: [
+      // MARK AS OPEN/CLOSED (Keep this)
+      _actionTile(
+        icon: isOpenOrAvailable ? Icons.lock_outline : Icons.lock_open_outlined,
+        iconColor: isOpenOrAvailable ? Colors.red : Colors.green,
+        title: isOpenOrAvailable ? 'Mark as Closed' : 'Mark as Open',
+        subtitle: 'Update your station availability',
+        onTap: _toggleStatus,
+      ),
+      
+      const Divider(height: 1, indent: 56),
+      
+      // EDIT STATION DETAILS (This now includes all fuel price editing)
+      _actionTile(
+        icon: Icons.edit_outlined,
+        iconColor: Colors.blue.shade600,
+        title: 'Edit Station Details',
+        subtitle: 'Update name, phone, fuel types & prices',
+        onTap: () async {
+          if (_station != null) {
+            final updatedData = await Navigator.push<Map<String, dynamic>>(
+              context,
+              MaterialPageRoute(
+                builder: (_) => EditStationScreen(station: _station!),
+              ),
+            );
+            if (updatedData != null && mounted) {
+              setState(() {
+                _station = updatedData as Map<String, dynamic>?;
+              });
+            }
+          }
+        },
+      ),
+    ]),
+  );
+}
+
 
   Widget _infoRow(IconData icon, String label, String value, {Color? valueColor}) {
     return Row(

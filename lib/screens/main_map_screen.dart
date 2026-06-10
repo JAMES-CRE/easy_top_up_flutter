@@ -244,7 +244,7 @@ class _MainMapScreenState extends State<MainMapScreen> {
   }
 
   // BOTTOM SHEET 
-  void _showBottomSheet(Map<String, dynamic> station) {
+  /*void _showBottomSheet(Map<String, dynamic> station) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -715,7 +715,764 @@ class _MainMapScreenState extends State<MainMapScreen> {
         );
       },
     );
+  }*/
+
+
+  // BOTTOM SHEET 
+  void _showBottomSheet(Map<String, dynamic> station) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.55,
+          minChildSize: 0.35,
+          maxChildSize: 0.95,
+          snap: true,
+          snapSizes: const [0.35, 0.55, 0.95],
+          expand: false,
+          builder: (context, scrollController) {
+            return Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: SingleChildScrollView(
+                controller: scrollController,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Drag handle
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          margin: const EdgeInsets.only(bottom: 16),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[400],
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+
+                      // Station name and type
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              station['name'],
+                              style: const TextStyle(
+                                  fontSize: 22, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          _typeBadge(station['type']),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+
+                      // DISTANCE ROW
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.location_on,
+                                size: 16, color: Colors.grey),
+                            const SizedBox(width: 6),
+                            Text(
+                              _getDistance(station['lat'], station['lng']),
+                              style: TextStyle(
+                                  fontSize: 14, color: Colors.grey[600]),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // STATUS 
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.circle,
+                              size: 12,
+                              color: _getStatusColor(station['status']),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Status: ${station['status'] ?? 'Unknown'}',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // ========== PETROL SECTION (Premium) ==========
+                      if (station['type'] == 'Petrol/Diesel' && station['petrol'] != null && station['petrol']['available'] == true)
+                        _buildPetrolSection(station['petrol']),
+
+                      // ========== DIESEL SECTION (Premium) ==========
+                      if (station['type'] == 'Petrol/Diesel' && station['diesel'] != null && station['diesel']['available'] == true)
+                        _buildDieselSection(station['diesel']),
+
+                      // ========== LPG SECTION (Simplified - No cylinder prices) ==========
+                      if (station['type'] == 'LPG')
+                        _buildLpgSection(station),
+
+                      // ========== EV SECTION (Premium) ==========
+                      if (station['type'] == 'EV' && station['charging_points'] != null)
+                        _buildEvSection(station),
+
+                      // ========== FALLBACK for old data format ==========
+                      // If no premium data exists, show simple price
+                      if (station['type'] == 'Petrol/Diesel' && 
+                          (station['petrol'] == null || station['petrol']['available'] != true) &&
+                          station['price'] != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.sell_outlined,
+                                  size: 16, color: Colors.green),
+                              const SizedBox(width: 6),
+                              Text(
+                                station['price'] ?? 'Price N/A',
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                      const SizedBox(height: 20),
+
+                      // DELIVERY BADGE (LPG only)
+                      if (station['type'] == 'LPG' && station['delivery_available'] == true)
+                        _buildDeliveryBadge(true),
+
+                      // BACKUP GENERATOR BADGE (EV only)
+                      if (station['type'] == 'EV' && station['has_backup_generator'] == true)
+                        _buildBackupGeneratorBadge(true),
+
+                      const SizedBox(height: 20),
+
+                      // LPG type badges (simplified - just showing types, no cylinder prices)
+                      if (station['type'] == 'LPG' && station['lpg_type'] != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Wrap(
+                            spacing: 8,
+                            children: (station['lpg_type'] as List).map((lpgType) {
+                              return Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.shade50,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                      color: Colors.blue.shade400, width: 1),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      lpgType == 'Autogas'
+                                          ? Icons.directions_car
+                                          : Icons.propane_tank,
+                                      size: 14,
+                                      color: Colors.blue.shade600,
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      lpgType,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.blue.shade700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+
+                      const SizedBox(height: 15),
+
+                      // PHOTO CAROUSEL 
+                      if (station['photos'] != null &&
+                          (station['photos'] as List).isNotEmpty)
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'PHOTOS',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.grey,
+                                letterSpacing: 1.2,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            SizedBox(
+                              height: 140,
+                              child: ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: (station['photos'] as List).length,
+                                itemBuilder: (context, index) {
+                                  final photoUrl = station['photos'][index];
+                                  return Padding(
+                                    padding: const EdgeInsets.only(right: 12),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(16),
+                                      child: GestureDetector(
+                                        onTap: () => _showFullScreenImage(
+                                            context, photoUrl),
+                                        child: Image.network(
+                                          photoUrl,
+                                          width: 180,
+                                          height: 140,
+                                          fit: BoxFit.cover,
+                                          loadingBuilder: (context, child,
+                                              loadingProgress) {
+                                            if (loadingProgress == null) {
+                                              return child;
+                                            }
+                                            return Container(
+                                              width: 180,
+                                              height: 140,
+                                              color: Colors.grey[200],
+                                              child: Center(
+                                                child:
+                                                    CircularProgressIndicator(
+                                                  value: loadingProgress
+                                                              .expectedTotalBytes !=
+                                                          null
+                                                      ? loadingProgress
+                                                              .cumulativeBytesLoaded /
+                                                          loadingProgress
+                                                              .expectedTotalBytes!
+                                                      : null,
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                          errorBuilder:
+                                              (context, error, stackTrace) {
+                                            return Container(
+                                              width: 180,
+                                              height: 140,
+                                              color: Colors.grey[200],
+                                              child: const Column(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: [
+                                                  Icon(Icons.broken_image,
+                                                      size: 40,
+                                                      color: Colors.grey),
+                                                  SizedBox(height: 4),
+                                                  Text('Failed to load',
+                                                      style: TextStyle(
+                                                          fontSize: 11,
+                                                          color: Colors.grey)),
+                                                ],
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+
+                      const SizedBox(height: 32),
+
+                      // Reviews section
+                      ReviewsSection(stationId: station['id'] as String),
+
+                      const SizedBox(height: 24),
+
+                      // Phone call row
+                      if (station['phone'] != null)
+                        InkWell(
+                          onTap: () => _makePhoneCall(station['phone']!),
+                          borderRadius: BorderRadius.circular(10),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.green.shade50,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(Icons.phone,
+                                      color: Colors.green, size: 20),
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  station['phone']!,
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    color: Colors.blue,
+                                    decoration: TextDecoration.underline,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                      const SizedBox(height: 4),
+
+                      // WhatsApp row
+                      if (station['whatsapp'] != null)
+                        InkWell(
+                          onTap: () => _openWhatsApp(station['whatsapp']!),
+                          borderRadius: BorderRadius.circular(10),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.green.shade50,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(Icons.chat,
+                                      color: Colors.green, size: 20),
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  station['whatsapp']!,
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    color: Colors.blue,
+                                    decoration: TextDecoration.underline,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                      const SizedBox(height: 40),
+
+                      // Action buttons
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          ElevatedButton.icon(
+                            icon: const Icon(Icons.directions, size: 20),
+                            label: const Text('Navigate'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green[700],
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 24, vertical: 10),
+                              minimumSize: const Size(140, 42),
+                            ),
+                            onPressed: () {
+                              if (_currentPosition == null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                      content: Text(
+                                          'Current location not available')),
+                                );
+                                return;
+                              }
+                              final Uri url = Uri.parse(
+                                'https://www.google.com/maps/dir/?api=1'
+                                '&origin=${_currentPosition!.latitude},${_currentPosition!.longitude}'
+                                '&destination=${station['lat']},${station['lng']}'
+                                '&travelmode=driving',
+                              );
+                              _launchUrl(url);
+                            },
+                          ),
+                          ElevatedButton.icon(
+                            icon: const Icon(Icons.flag, size: 20),
+                            label: const Text('Report'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.orange,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 24, vertical: 10),
+                              minimumSize: const Size(140, 42),
+                            ),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      ReportIssueScreen(station: station),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
+
+  // ========== PREMIUM PETROL SECTION ==========
+  Widget _buildPetrolSection(Map<String, dynamic> petrolData) {
+    final octanes = petrolData['octane_ratings'] as List?;
+    if (octanes == null || octanes.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '⛽ PETROL',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Colors.amber.shade700,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.grey.shade50,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Table(
+            columnWidths: const {
+              0: FlexColumnWidth(2),
+              1: FlexColumnWidth(1.5),
+              2: FlexColumnWidth(1.5),
+            },
+            children: [
+              TableRow(
+                decoration: BoxDecoration(
+                  border: Border(bottom: BorderSide(color: Colors.grey.shade300)),
+                ),
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.all(10),
+                    child: Text('Octane', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.all(10),
+                    child: Text('Price', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.all(10),
+                    child: Text('Status', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                  ),
+                ],
+              ),
+              ...octanes.map((octane) {
+                return TableRow(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(10),
+                      child: Text(octane['name'] ?? 'N/A', style: const TextStyle(fontSize: 13)),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(10),
+                      child: Text(
+                        'GH₵ ${octane['price']?.toString() ?? '0'}/L',
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.green),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(10),
+                      child: Row(
+                        children: [
+                          Icon(
+                            octane['in_stock'] == true ? Icons.check_circle : Icons.cancel,
+                            size: 16,
+                            color: octane['in_stock'] == true ? Colors.green : Colors.red,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            octane['in_stock'] == true ? 'In Stock' : 'Out of Stock',
+                            style: TextStyle(fontSize: 12, color: octane['in_stock'] == true ? Colors.green : Colors.red),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              }).toList(),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+
+  // ========== PREMIUM DIESEL SECTION ==========
+  Widget _buildDieselSection(Map<String, dynamic> dieselData) {
+    final diesels = dieselData['diesel_types'] as List?;
+    if (diesels == null || diesels.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '🛢️ DIESEL',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Colors.brown.shade700,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.grey.shade50,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Table(
+            columnWidths: const {
+              0: FlexColumnWidth(2),
+              1: FlexColumnWidth(1.5),
+              2: FlexColumnWidth(1.5),
+            },
+            children: [
+              TableRow(
+                decoration: BoxDecoration(
+                  border: Border(bottom: BorderSide(color: Colors.grey.shade300)),
+                ),
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.all(10),
+                    child: Text('Type', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.all(10),
+                    child: Text('Price', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.all(10),
+                    child: Text('Status', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                  ),
+                ],
+              ),
+              ...diesels.map((diesel) {
+                return TableRow(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(10),
+                      child: Text(diesel['name'] ?? 'N/A', style: const TextStyle(fontSize: 13)),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(10),
+                      child: Text(
+                        'GH₵ ${diesel['price']?.toString() ?? '0'}/L',
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.green),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(10),
+                      child: Row(
+                        children: [
+                          Icon(
+                            diesel['in_stock'] == true ? Icons.check_circle : Icons.cancel,
+                            size: 16,
+                            color: diesel['in_stock'] == true ? Colors.green : Colors.red,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            diesel['in_stock'] == true ? 'In Stock' : 'Out of Stock',
+                            style: TextStyle(fontSize: 12, color: diesel['in_stock'] == true ? Colors.green : Colors.red),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              }).toList(),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+
+  // ========== SIMPLIFIED LPG SECTION==========
+  Widget _buildLpgSection(Map<String, dynamic> station) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '💨 LPG',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Colors.blue.shade700,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade50,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Price per kg:', style: TextStyle(fontSize: 14)),
+                  Text(
+                    station['price'] ?? 'N/A',
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.green),
+                  ),
+                ],
+              ),
+              if (station['delivery_available'] == true)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Row(
+                    children: [
+                      Icon(Icons.delivery_dining, size: 16, color: Colors.blue.shade700),
+                      const SizedBox(width: 8),
+                      const Text('Home Delivery Available', style: TextStyle(fontSize: 13)),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+
+  // ========== PREMIUM EV SECTION ==========
+  Widget _buildEvSection(Map<String, dynamic> station) {
+    final chargingPoints = station['charging_points'] as List?;
+    if (chargingPoints == null || chargingPoints.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '⚡ EV CHARGING',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Colors.green.shade600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.grey.shade50,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Table(
+            columnWidths: const {
+              0: FlexColumnWidth(1.5),
+              1: FlexColumnWidth(1),
+              2: FlexColumnWidth(1.2),
+              3: FlexColumnWidth(1.2),
+            },
+            children: [
+              TableRow(
+                decoration: BoxDecoration(
+                  border: Border(bottom: BorderSide(color: Colors.grey.shade300)),
+                ),
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.all(8),
+                    child: Text('Connector', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.all(8),
+                    child: Text('Power', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.all(8),
+                    child: Text('Price/kWh', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.all(8),
+                    child: Text('Status', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
+                  ),
+                ],
+              ),
+              ...chargingPoints.map((point) {
+                return TableRow(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: Text(point['connector'] ?? 'N/A', style: const TextStyle(fontSize: 12)),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: Text('${point['power_kw'] ?? 0} kW', style: const TextStyle(fontSize: 12)),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: Text(
+                        'GH₵ ${point['price_per_kwh']?.toString() ?? '0'}',
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.green),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: Row(
+                        children: [
+                          Icon(
+                            point['available'] == true ? Icons.check_circle : Icons.cancel,
+                            size: 14,
+                            color: point['available'] == true ? Colors.green : Colors.red,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            point['available'] == true ? 'Available' : 'Busy',
+                            style: TextStyle(fontSize: 11, color: point['available'] == true ? Colors.green : Colors.red),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              }).toList(),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+
 
   // URL LAUNCHER 
   Future<void> _launchUrl(Uri url) async {
@@ -980,197 +1737,8 @@ class _MainMapScreenState extends State<MainMapScreen> {
     );
   }
 
-  // ── BUILD LPG CYLINDER PRICES SECTION (FIXED) ──
-  /*Widget _buildLpgPricesSection(Map<String, dynamic> station) {
-    final cylinderPrices = station['cylinder_prices'];
-    if (cylinderPrices == null) return const SizedBox.shrink();
 
-    final pricePerKg = station['lpg_price_per_kg'];
-    
-    // Parse pricePerKg to double - handles both String and number types
-    double parsedPricePerKg = 0;
-    if (pricePerKg != null) {
-      if (pricePerKg is String) {
-        parsedPricePerKg = double.tryParse(pricePerKg) ?? 0;
-      } else if (pricePerKg is num) {
-        parsedPricePerKg = pricePerKg.toDouble();
-      }
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 16),
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.blue.shade50,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.calculate, size: 16, color: Colors.blue),
-              const SizedBox(width: 8),
-              Text(
-                'Rate: GH₵ ${parsedPricePerKg.toStringAsFixed(2)} / kg',
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.blue,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        const Text(
-          'CYLINDER PRICES',
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: Colors.grey,
-            letterSpacing: 1.2,
-          ),
-        ),
-        const SizedBox(height: 10),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.grey.shade50,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey.shade200),
-          ),
-          child: Column(
-            children: [
-              _buildCylinderPriceRow('3 kg', cylinderPrices['3kg']),
-              _buildCylinderPriceRow('6 kg', cylinderPrices['6kg']),
-              _buildCylinderPriceRow('11 kg', cylinderPrices['11kg']),
-              _buildCylinderPriceRow('14.5 kg', cylinderPrices['14.5kg']),
-              _buildCylinderPriceRow('15 kg', cylinderPrices['15kg']),
-              _buildCylinderPriceRow('50 kg', cylinderPrices['50kg']),
-            ],
-          ),
-        ),
-      ],
-    );
-  }*/
-
-  Widget _buildLpgPricesSection(Map<String, dynamic> station) {
-    final cylinderPrices = station['cylinder_prices'];
-    if (cylinderPrices == null) return const SizedBox.shrink();
-
-    // Extract price per kg from the 'price' field
-    // price field looks like: "GH₵ 12.70/kg"
-    String? pricePerKgStr;
-    final priceField = station['price'];
-    if (priceField != null && priceField.toString().contains('/kg')) {
-      // Extract the number from "GH₵ 12.70/kg"
-      final match = RegExp(r'[\d.]+').firstMatch(priceField.toString());
-      if (match != null) {
-        pricePerKgStr = match.group(0);
-      }
-    }
-
-    // Parse to double
-    double parsedPricePerKg = 0;
-    if (pricePerKgStr != null) {
-      parsedPricePerKg = double.tryParse(pricePerKgStr) ?? 0;
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 16),
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.blue.shade50,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.calculate, size: 16, color: Colors.blue),
-              const SizedBox(width: 8),
-              Text(
-                'Rate: GH₵ ${parsedPricePerKg.toStringAsFixed(2)} / kg',
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.blue,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        const Text(
-          'CYLINDER PRICES',
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: Colors.grey,
-            letterSpacing: 1.2,
-          ),
-        ),
-        const SizedBox(height: 10),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.grey.shade50,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey.shade200),
-          ),
-          child: Column(
-            children: [
-              _buildCylinderPriceRow('3 kg', cylinderPrices['3kg']),
-              _buildCylinderPriceRow('6 kg', cylinderPrices['6kg']),
-              _buildCylinderPriceRow('11 kg', cylinderPrices['11kg']),
-              _buildCylinderPriceRow('14.5 kg', cylinderPrices['14.5kg']),
-              _buildCylinderPriceRow('15 kg', cylinderPrices['15kg']),
-              _buildCylinderPriceRow('50 kg', cylinderPrices['50kg']),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCylinderPriceRow(String size, dynamic price) {
-    if (price == null) return const SizedBox.shrink();
-
-    // Convert to string safely
-    final priceString = price.toString();
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: Colors.grey.shade200),
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            size,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: Colors.black87,
-            ),
-          ),
-          Text(
-            priceString,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: Colors.green.shade700,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  
 
   //BUILD DELIVERY BADGE 
   Widget _buildDeliveryBadge(bool isAvailable) {
