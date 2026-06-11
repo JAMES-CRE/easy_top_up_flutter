@@ -134,7 +134,7 @@ class _MainMapScreenState extends State<MainMapScreen> {
     }
   }
 
-  // DISTANCE CALCULATOR 
+  // DISTANCE CALCULATOR
   String _getDistance(double stationLat, double stationLng) {
     if (_currentPosition == null) return '';
 
@@ -156,7 +156,7 @@ class _MainMapScreenState extends State<MainMapScreen> {
     return '${distance.toStringAsFixed(1)} km away';
   }
 
-  //MAP MARKERS 
+  //MAP MARKERS
   Set<Marker> _buildMarkers() {
     return _stations.map((station) {
       double hue;
@@ -183,7 +183,7 @@ class _MainMapScreenState extends State<MainMapScreen> {
     }).toSet();
   }
 
-  //  STATION TYPE BADGE 
+  //  STATION TYPE BADGE
   Widget _typeBadge(String type) {
     Color color;
     IconData icon;
@@ -231,7 +231,7 @@ class _MainMapScreenState extends State<MainMapScreen> {
     );
   }
 
-// GET STATUS COLOR 
+// GET STATUS COLOR
   Color _getStatusColor(String? status) {
     switch (status) {
       case 'Open':
@@ -243,7 +243,7 @@ class _MainMapScreenState extends State<MainMapScreen> {
     }
   }
 
-  // BOTTOM SHEET 
+  // BOTTOM SHEET
   /*void _showBottomSheet(Map<String, dynamic> station) {
     showModalBottomSheet(
       context: context,
@@ -717,8 +717,7 @@ class _MainMapScreenState extends State<MainMapScreen> {
     );
   }*/
 
-
-  // BOTTOM SHEET 
+  // BOTTOM SHEET
   void _showBottomSheet(Map<String, dynamic> station) {
     showModalBottomSheet(
       context: context,
@@ -790,7 +789,7 @@ class _MainMapScreenState extends State<MainMapScreen> {
                         ),
                       ),
 
-                      // STATUS 
+                      // STATUS
                       Padding(
                         padding: const EdgeInsets.only(top: 6),
                         child: Row(
@@ -812,28 +811,91 @@ class _MainMapScreenState extends State<MainMapScreen> {
                         ),
                       ),
 
+                      //const SizedBox(height: 20),
+                      // DELIVERY BADGE (LPG only)
+                      if (station['type'] == 'LPG' &&
+                          station['delivery_available'] == true)
+                        _buildDeliveryBadge(true),
+
+                      // BACKUP GENERATOR BADGE (EV only)
+                      if (station['type'] == 'EV' &&
+                          station['has_backup_generator'] == true)
+                        _buildBackupGeneratorBadge(true),
+
                       const SizedBox(height: 20),
 
                       // ========== PETROL SECTION (Premium) ==========
-                      if (station['type'] == 'Petrol/Diesel' && station['petrol'] != null && station['petrol']['available'] == true)
+                      if (station['type'] == 'Petrol/Diesel' &&
+                          station['petrol'] != null &&
+                          station['petrol']['available'] == true)
                         _buildPetrolSection(station['petrol']),
 
                       // ========== DIESEL SECTION (Premium) ==========
-                      if (station['type'] == 'Petrol/Diesel' && station['diesel'] != null && station['diesel']['available'] == true)
+                      if (station['type'] == 'Petrol/Diesel' &&
+                          station['diesel'] != null &&
+                          station['diesel']['available'] == true)
                         _buildDieselSection(station['diesel']),
 
+                      // LPG type badges (simplified - just showing types, no cylinder prices)
+                      if (station['type'] == 'LPG' &&
+                          station['lpg_type'] != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Wrap(
+                            spacing: 8,
+                            children:
+                                (station['lpg_type'] as List).map((lpgType) {
+                              return Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.shade50,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      lpgType == 'Autogas'
+                                          ? Icons.directions_car
+                                          : Icons.propane_tank,
+                                      size: 14,
+                                      color: Colors.blue.shade600,
+                                    ),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      lpgType,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.black,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+
+                      const SizedBox(height: 15),
+
                       // ========== LPG SECTION (Simplified - No cylinder prices) ==========
-                      if (station['type'] == 'LPG')
-                        _buildLpgSection(station),
+                      if (station['type'] == 'LPG') _buildLpgSection(station),
 
                       // ========== EV SECTION (Premium) ==========
-                      if (station['type'] == 'EV' && station['charging_points'] != null)
+                      if (station['type'] == 'EV' &&
+                          station['charging_points'] != null)
                         _buildEvSection(station),
 
                       // ========== FALLBACK for old data format ==========
                       // If no premium data exists, show simple price
-                      if (station['type'] == 'Petrol/Diesel' && 
-                          (station['petrol'] == null || station['petrol']['available'] != true) &&
+                      if (station['type'] == 'Petrol/Diesel' &&
+                          (station['petrol'] == null ||
+                              station['petrol']['available'] != true) &&
                           station['price'] != null)
                         Padding(
                           padding: const EdgeInsets.only(top: 6),
@@ -856,61 +918,7 @@ class _MainMapScreenState extends State<MainMapScreen> {
 
                       const SizedBox(height: 20),
 
-                      // DELIVERY BADGE (LPG only)
-                      if (station['type'] == 'LPG' && station['delivery_available'] == true)
-                        _buildDeliveryBadge(true),
-
-                      // BACKUP GENERATOR BADGE (EV only)
-                      if (station['type'] == 'EV' && station['has_backup_generator'] == true)
-                        _buildBackupGeneratorBadge(true),
-
-                      const SizedBox(height: 20),
-
-                      // LPG type badges (simplified - just showing types, no cylinder prices)
-                      if (station['type'] == 'LPG' && station['lpg_type'] != null)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8),
-                          child: Wrap(
-                            spacing: 8,
-                            children: (station['lpg_type'] as List).map((lpgType) {
-                              return Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Colors.blue.shade50,
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                      color: Colors.blue.shade400, width: 1),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      lpgType == 'Autogas'
-                                          ? Icons.directions_car
-                                          : Icons.propane_tank,
-                                      size: 14,
-                                      color: Colors.blue.shade600,
-                                    ),
-                                    const SizedBox(width: 5),
-                                    Text(
-                                      lpgType,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.blue.shade700,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                        ),
-
-                      const SizedBox(height: 15),
-
-                      // PHOTO CAROUSEL 
+                      // PHOTO CAROUSEL
                       if (station['photos'] != null &&
                           (station['photos'] as List).isNotEmpty)
                         Column(
@@ -1148,11 +1156,11 @@ class _MainMapScreenState extends State<MainMapScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '⛽ PETROL',
+          'PETROL',
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            color: Colors.amber.shade700,
+            color: Colors.black87,
           ),
         ),
         const SizedBox(height: 8),
@@ -1164,27 +1172,34 @@ class _MainMapScreenState extends State<MainMapScreen> {
           ),
           child: Table(
             columnWidths: const {
-              0: FlexColumnWidth(2),
+              0: FlexColumnWidth(1),
               1: FlexColumnWidth(1.5),
               2: FlexColumnWidth(1.5),
             },
             children: [
               TableRow(
                 decoration: BoxDecoration(
-                  border: Border(bottom: BorderSide(color: Colors.grey.shade300)),
+                  border:
+                      Border(bottom: BorderSide(color: Colors.grey.shade300)),
                 ),
                 children: [
                   const Padding(
                     padding: EdgeInsets.all(10),
-                    child: Text('Octane', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                    child: Text('Octane',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 12)),
                   ),
                   const Padding(
                     padding: EdgeInsets.all(10),
-                    child: Text('Price', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                    child: Text('Price',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 12)),
                   ),
                   const Padding(
                     padding: EdgeInsets.all(10),
-                    child: Text('Status', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                    child: Text('Status',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 12)),
                   ),
                 ],
               ),
@@ -1193,13 +1208,17 @@ class _MainMapScreenState extends State<MainMapScreen> {
                   children: [
                     Padding(
                       padding: const EdgeInsets.all(10),
-                      child: Text(octane['name'] ?? 'N/A', style: const TextStyle(fontSize: 13)),
+                      child: Text(octane['name'] ?? 'N/A',
+                          style: const TextStyle(fontSize: 13)),
                     ),
                     Padding(
                       padding: const EdgeInsets.all(10),
                       child: Text(
                         'GH₵ ${octane['price']?.toString() ?? '0'}/L',
-                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.green),
+                        style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.green),
                       ),
                     ),
                     Padding(
@@ -1207,14 +1226,24 @@ class _MainMapScreenState extends State<MainMapScreen> {
                       child: Row(
                         children: [
                           Icon(
-                            octane['in_stock'] == true ? Icons.check_circle : Icons.cancel,
+                            octane['in_stock'] == true
+                                ? Icons.check_circle
+                                : Icons.cancel,
                             size: 16,
-                            color: octane['in_stock'] == true ? Colors.green : Colors.red,
+                            color: octane['in_stock'] == true
+                                ? Colors.green
+                                : Colors.red,
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            octane['in_stock'] == true ? 'In Stock' : 'Out of Stock',
-                            style: TextStyle(fontSize: 12, color: octane['in_stock'] == true ? Colors.green : Colors.red),
+                            octane['in_stock'] == true
+                                ? 'In Stock'
+                                : 'Out of Stock',
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: octane['in_stock'] == true
+                                    ? Colors.green
+                                    : Colors.red),
                           ),
                         ],
                       ),
@@ -1239,11 +1268,11 @@ class _MainMapScreenState extends State<MainMapScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '🛢️ DIESEL',
+          'DIESEL',
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            color: Colors.brown.shade700,
+            color: Colors.black87,
           ),
         ),
         const SizedBox(height: 8),
@@ -1262,20 +1291,27 @@ class _MainMapScreenState extends State<MainMapScreen> {
             children: [
               TableRow(
                 decoration: BoxDecoration(
-                  border: Border(bottom: BorderSide(color: Colors.grey.shade300)),
+                  border:
+                      Border(bottom: BorderSide(color: Colors.grey.shade300)),
                 ),
                 children: [
                   const Padding(
                     padding: EdgeInsets.all(10),
-                    child: Text('Type', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                    child: Text('Type',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 12)),
                   ),
                   const Padding(
                     padding: EdgeInsets.all(10),
-                    child: Text('Price', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                    child: Text('Price',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 12)),
                   ),
                   const Padding(
                     padding: EdgeInsets.all(10),
-                    child: Text('Status', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                    child: Text('Status',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 12)),
                   ),
                 ],
               ),
@@ -1284,13 +1320,17 @@ class _MainMapScreenState extends State<MainMapScreen> {
                   children: [
                     Padding(
                       padding: const EdgeInsets.all(10),
-                      child: Text(diesel['name'] ?? 'N/A', style: const TextStyle(fontSize: 13)),
+                      child: Text(diesel['name'] ?? 'N/A',
+                          style: const TextStyle(fontSize: 13)),
                     ),
                     Padding(
                       padding: const EdgeInsets.all(10),
                       child: Text(
                         'GH₵ ${diesel['price']?.toString() ?? '0'}/L',
-                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.green),
+                        style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.green),
                       ),
                     ),
                     Padding(
@@ -1298,14 +1338,24 @@ class _MainMapScreenState extends State<MainMapScreen> {
                       child: Row(
                         children: [
                           Icon(
-                            diesel['in_stock'] == true ? Icons.check_circle : Icons.cancel,
+                            diesel['in_stock'] == true
+                                ? Icons.check_circle
+                                : Icons.cancel,
                             size: 16,
-                            color: diesel['in_stock'] == true ? Colors.green : Colors.red,
+                            color: diesel['in_stock'] == true
+                                ? Colors.green
+                                : Colors.red,
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            diesel['in_stock'] == true ? 'In Stock' : 'Out of Stock',
-                            style: TextStyle(fontSize: 12, color: diesel['in_stock'] == true ? Colors.green : Colors.red),
+                            diesel['in_stock'] == true
+                                ? 'In Stock'
+                                : 'Out of Stock',
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: diesel['in_stock'] == true
+                                    ? Colors.green
+                                    : Colors.red),
                           ),
                         ],
                       ),
@@ -1321,13 +1371,13 @@ class _MainMapScreenState extends State<MainMapScreen> {
     );
   }
 
-  // ========== SIMPLIFIED LPG SECTION==========
+  // ========== LPG SECTION (No duplicate delivery badge) ==========
   Widget _buildLpgSection(Map<String, dynamic> station) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '💨 LPG',
+          ' LPG',
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
@@ -1335,6 +1385,8 @@ class _MainMapScreenState extends State<MainMapScreen> {
           ),
         ),
         const SizedBox(height: 8),
+
+        // Price Card only (no delivery info)
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
@@ -1342,47 +1394,38 @@ class _MainMapScreenState extends State<MainMapScreen> {
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: Colors.grey.shade200),
           ),
-          child: Column(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Price per kg:', style: TextStyle(fontSize: 14)),
-                  Text(
-                    station['price'] ?? 'N/A',
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.green),
-                  ),
-                ],
+              const Text('Price per kg:', style: TextStyle(fontSize: 14)),
+              Text(
+                station['price'] ?? 'N/A',
+                style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green),
               ),
-              if (station['delivery_available'] == true)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Row(
-                    children: [
-                      Icon(Icons.delivery_dining, size: 16, color: Colors.blue.shade700),
-                      const SizedBox(width: 8),
-                      const Text('Home Delivery Available', style: TextStyle(fontSize: 13)),
-                    ],
-                  ),
-                ),
             ],
           ),
         ),
+
         const SizedBox(height: 16),
       ],
     );
   }
 
   // ========== PREMIUM EV SECTION ==========
+  // ========== PREMIUM EV SECTION (Overflow Fixed) ==========
   Widget _buildEvSection(Map<String, dynamic> station) {
     final chargingPoints = station['charging_points'] as List?;
-    if (chargingPoints == null || chargingPoints.isEmpty) return const SizedBox.shrink();
+    if (chargingPoints == null || chargingPoints.isEmpty)
+      return const SizedBox.shrink();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '⚡ EV CHARGING',
+          'EV CHARGING',
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
@@ -1391,81 +1434,118 @@ class _MainMapScreenState extends State<MainMapScreen> {
         ),
         const SizedBox(height: 8),
         Container(
+          width: double.infinity,
           decoration: BoxDecoration(
             color: Colors.grey.shade50,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: Colors.grey.shade200),
           ),
-          child: Table(
-            columnWidths: const {
-              0: FlexColumnWidth(1.5),
-              1: FlexColumnWidth(1),
-              2: FlexColumnWidth(1.2),
-              3: FlexColumnWidth(1.2),
-            },
-            children: [
-              TableRow(
-                decoration: BoxDecoration(
-                  border: Border(bottom: BorderSide(color: Colors.grey.shade300)),
-                ),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: IntrinsicWidth(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Padding(
-                    padding: EdgeInsets.all(8),
-                    child: Text('Connector', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
-                  ),
-                  const Padding(
-                    padding: EdgeInsets.all(8),
-                    child: Text('Power', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
-                  ),
-                  const Padding(
-                    padding: EdgeInsets.all(8),
-                    child: Text('Price/kWh', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
-                  ),
-                  const Padding(
-                    padding: EdgeInsets.all(8),
-                    child: Text('Status', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
-                  ),
-                ],
-              ),
-              ...chargingPoints.map((point) {
-                return TableRow(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: Text(point['connector'] ?? 'N/A', style: const TextStyle(fontSize: 12)),
+                  // Header Row
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      border: Border(
+                          bottom: BorderSide(color: Colors.grey.shade300)),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: Text('${point['power_kw'] ?? 0} kW', style: const TextStyle(fontSize: 12)),
+                    child: Row(
+                      children: const [
+                        SizedBox(
+                            width: 80,
+                            child: Text('Connector',
+                                style: TextStyle(fontWeight: FontWeight.bold))),
+                        SizedBox(
+                            width: 70,
+                            child: Text('Power',
+                                style: TextStyle(fontWeight: FontWeight.bold))),
+                        SizedBox(
+                            width: 80,
+                            child: Text('Price/kWh',
+                                style: TextStyle(fontWeight: FontWeight.bold))),
+                        SizedBox(
+                            width: 80,
+                            child: Text('Status',
+                                style: TextStyle(fontWeight: FontWeight.bold))),
+                      ],
                     ),
-                    Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: Text(
-                        'GH₵ ${point['price_per_kwh']?.toString() ?? '0'}',
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.green),
+                  ),
+                  // Data Rows
+                  ...chargingPoints.map((point) {
+                    final isAvailable = point['available'] == true;
+                    return Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        border: Border(
+                            bottom: BorderSide(color: Colors.grey.shade100)),
                       ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(8),
                       child: Row(
                         children: [
-                          Icon(
-                            point['available'] == true ? Icons.check_circle : Icons.cancel,
-                            size: 14,
-                            color: point['available'] == true ? Colors.green : Colors.red,
+                          SizedBox(
+                            width: 80,
+                            child: Text(
+                              point['connector'] ?? 'N/A',
+                              style: const TextStyle(fontSize: 12),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                          const SizedBox(width: 4),
-                          Text(
-                            point['available'] == true ? 'Available' : 'Busy',
-                            style: TextStyle(fontSize: 11, color: point['available'] == true ? Colors.green : Colors.red),
+                          SizedBox(
+                            width: 70,
+                            child: Text(
+                              '${point['power_kw'] ?? 0} kW',
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                          ),
+                          SizedBox(
+                            width: 80,
+                            child: Text(
+                              'GH₵ ${point['price_per_kwh']?.toString() ?? '0'}',
+                              style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.green),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          SizedBox(
+                            width: 80,
+                            child: Row(
+                              children: [
+                                Icon(
+                                  isAvailable
+                                      ? Icons.check_circle
+                                      : Icons.cancel,
+                                  size: 14,
+                                  color:
+                                      isAvailable ? Colors.green : Colors.red,
+                                ),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    isAvailable ? 'Available' : 'Busy',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: isAvailable
+                                          ? Colors.green
+                                          : Colors.red,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
-                    ),
-                  ],
-                );
-              }).toList(),
-            ],
+                    );
+                  }).toList(),
+                ],
+              ),
+            ),
           ),
         ),
         const SizedBox(height: 16),
@@ -1473,8 +1553,7 @@ class _MainMapScreenState extends State<MainMapScreen> {
     );
   }
 
-
-  // URL LAUNCHER 
+  // URL LAUNCHER
   Future<void> _launchUrl(Uri url) async {
     if (await canLaunchUrl(url)) {
       await launchUrl(url, mode: LaunchMode.externalApplication);
@@ -1486,7 +1565,7 @@ class _MainMapScreenState extends State<MainMapScreen> {
     }
   }
 
-  // SHOW FULL SCREEN IMAGE 
+  // SHOW FULL SCREEN IMAGE
   void _showFullScreenImage(BuildContext context, String imageUrl) {
     showDialog(
       context: context,
@@ -1533,7 +1612,7 @@ class _MainMapScreenState extends State<MainMapScreen> {
     }
   }
 
-  // WHATSAPP 
+  // WHATSAPP
   Future<void> _openWhatsApp(String phoneNumber) async {
     final String clean = phoneNumber.replaceAll('+', '');
     final Uri url = Uri.parse('https://wa.me/$clean');
@@ -1737,10 +1816,7 @@ class _MainMapScreenState extends State<MainMapScreen> {
     );
   }
 
-
-  
-
-  //BUILD DELIVERY BADGE 
+  //BUILD DELIVERY BADGE
   Widget _buildDeliveryBadge(bool isAvailable) {
     if (!isAvailable) return const SizedBox.shrink();
 
@@ -1770,7 +1846,7 @@ class _MainMapScreenState extends State<MainMapScreen> {
     );
   }
 
-// BUILD BACKUP GENERATOR BADGE (EV only) 
+// BUILD BACKUP GENERATOR BADGE (EV only)
   Widget _buildBackupGeneratorBadge(bool hasBackupGenerator) {
     if (!hasBackupGenerator) return const SizedBox.shrink();
 
@@ -1808,7 +1884,7 @@ class _MainMapScreenState extends State<MainMapScreen> {
   }
 }
 
-// LEGEND ITEM 
+// LEGEND ITEM
 class _LegendItem extends StatelessWidget {
   final Color color;
   final String label;
