@@ -6,9 +6,6 @@ import 'api_service.dart';
 import 'add_station_screen.dart';
 import 'edit_station_screen.dart';
 
-
-
-
 class OperatorDashboardScreen extends StatefulWidget {
   final Map<String, dynamic>? station;
 
@@ -24,7 +21,6 @@ class _OperatorDashboardScreenState extends State<OperatorDashboardScreen> {
 
   Map<String, dynamic>? _station;
   bool _isLoading = false;
-  final TextEditingController _priceController = TextEditingController();
 
   @override
   void initState() {
@@ -32,12 +28,10 @@ class _OperatorDashboardScreenState extends State<OperatorDashboardScreen> {
     _station = widget.station;
   }
 
-  // REFRESH 
   Future<void> _refresh() async {
     setState(() {});
   }
 
-  // FUEL COLOR 
   Color _fuelColor(String type) {
     switch (type) {
       case 'Petrol/Diesel':
@@ -51,7 +45,6 @@ class _OperatorDashboardScreenState extends State<OperatorDashboardScreen> {
     }
   }
 
-  //  FUEL ICON 
   IconData _fuelIcon(String type) {
     switch (type) {
       case 'Petrol/Diesel':
@@ -65,21 +58,206 @@ class _OperatorDashboardScreenState extends State<OperatorDashboardScreen> {
     }
   }
 
-  // GET SAFE STRING VALUE 
-  //String _getSafeString(String? value, {String defaultValue = ''}) {
-   // return value ?? defaultValue;
- // }
-
+  // ========== PRICE DISPLAY METHODS ==========
   
+  Widget _buildFuelPricesSection(Map<String, dynamic> station) {
+  final type = station['type'];
+  
+  if (type == 'Petrol/Diesel') {
+    // Use 'petrol' and 'diesel' (from API, not 'petrol_data')
+    final petrolData = station['petrol'];
+    final dieselData = station['diesel'];
+    
+    List<Widget> priceWidgets = [];
+    
+    // Add petrol prices if they exist
+    if (petrolData != null && petrolData is Map) {
+      final octanes = petrolData['octane_ratings'];
+      if (octanes != null && octanes is List && octanes.isNotEmpty) {
+        priceWidgets.add(const Padding(
+          padding: EdgeInsets.only(top: 8, bottom: 4),
+          child: Text('⛽ PETROL', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.amber)),
+        ));
+        for (var octane in octanes) {
+          priceWidgets.add(Padding(
+            padding: const EdgeInsets.only(left: 8, bottom: 4),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(octane['name'] ?? 'N/A'),
+                Row(
+                  children: [
+                    Text('GH₵ ${octane['price']}/L', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
+                    const SizedBox(width: 8),
+                    Icon(
+                      octane['in_stock'] == true ? Icons.check_circle : Icons.cancel,
+                      size: 14,
+                      color: octane['in_stock'] == true ? Colors.green : Colors.red,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ));
+        }
+      }
+    }
+    
+    // Add diesel prices if they exist
+    if (dieselData != null && dieselData is Map) {
+      final diesels = dieselData['diesel_types'];
+      if (diesels != null && diesels is List && diesels.isNotEmpty) {
+        priceWidgets.add(const Padding(
+          padding: EdgeInsets.only(top: 8, bottom: 4),
+          child: Text('🛢️ DIESEL', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.brown)),
+        ));
+        for (var diesel in diesels) {
+          priceWidgets.add(Padding(
+            padding: const EdgeInsets.only(left: 8, bottom: 4),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(diesel['name'] ?? 'N/A'),
+                Row(
+                  children: [
+                    Text('GH₵ ${diesel['price']}/L', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
+                    const SizedBox(width: 8),
+                    Icon(
+                      diesel['in_stock'] == true ? Icons.check_circle : Icons.cancel,
+                      size: 14,
+                      color: diesel['in_stock'] == true ? Colors.green : Colors.red,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ));
+        }
+      }
+    }
+    
+    // Fallback: show simple price if no structured data
+    if (priceWidgets.isEmpty && station['price'] != null) {
+      priceWidgets.add(Padding(
+        padding: const EdgeInsets.only(top: 8),
+        child: Text(station['price'], style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green)),
+      ));
+    }
+    
+    if (priceWidgets.isEmpty) {
+      priceWidgets.add(const Padding(
+        padding: EdgeInsets.only(top: 8),
+        child: Text('No prices set', style: TextStyle(color: Colors.grey)),
+      ));
+    }
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'FUEL PRICES',
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey, letterSpacing: 1.2),
+        ),
+        ...priceWidgets,
+      ],
+    );
+  }
+  
+  if (type == 'EV') {
+    // Use 'charging_points' (from API, not 'ev_data')
+    final chargingPoints = station['charging_points'];
+    
+    List<Widget> evWidgets = [];
+    
+    if (chargingPoints != null && chargingPoints is List && chargingPoints.isNotEmpty) {
+      for (var point in chargingPoints) {
+        evWidgets.add(Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('⚡ ${point['connector'] ?? 'N/A'}', style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14)),
+                  Text('${point['power_kw'] ?? 0} kW', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                ],
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text('GH₵ ${point['price_per_kwh'] ?? 0}/kWh', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green, fontSize: 14)),
+                  Text(
+                    point['available'] == true ? 'Available' : 'Busy',
+                    style: TextStyle(fontSize: 12, color: point['available'] == true ? Colors.green : Colors.red),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ));
+      }
+    } else if (station['price'] != null) {
+      evWidgets.add(Text(station['price'], style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green)));
+    } else {
+      evWidgets.add(const Text('No charging prices set', style: TextStyle(color: Colors.grey)));
+    }
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'CHARGING PRICES',
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey, letterSpacing: 1.2),
+        ),
+        const SizedBox(height: 8),
+        ...evWidgets,
+      ],
+    );
+  }
+  
+  // LPG - simple price
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Text(
+        'PRICE',
+        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey, letterSpacing: 1.2),
+      ),
+      const SizedBox(height: 8),
+      // Show LPG type as well
+      if (station['lpg_type'] != null && (station['lpg_type'] as List).isNotEmpty)
+        Wrap(
+          spacing: 8,
+          children: (station['lpg_type'] as List).map((type) => Chip(
+            label: Text(type, style: const TextStyle(fontSize: 12)),
+            backgroundColor: Colors.blue.shade50,
+          )).toList(),
+        ),
+      const SizedBox(height: 8),
+      Text(station['price'] ?? 'Not set', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green)),
+      if (station['delivery_available'] == true)
+        Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Row(
+            children: [
+              Icon(Icons.delivery_dining, size: 16, color: Colors.blue.shade700),
+              const SizedBox(width: 8),
+              const Text('Home Delivery Available', style: TextStyle(fontSize: 12)),
+            ],
+          ),
+        ),
+    ],
+  );
+}
 
-  //  TOGGLE STATUS 
+  // ========== TOGGLE STATUS ==========
   Future<void> _toggleStatus() async {
     setState(() => _isLoading = true);
 
     try {
       final current = _station!['status'];
       final newStatus = current == 'Open' ? 'Closed' : 'Open';
-          
 
       final token = AuthState.instance.token ?? '';
       await ApiService.updateStatus(
@@ -111,16 +289,17 @@ class _OperatorDashboardScreenState extends State<OperatorDashboardScreen> {
     }
   }
 
-  
-
   @override
   Widget build(BuildContext context) {
-    // Safely get values with null handling
-    final stationPrice = _station != null ? (_station!['price'] ?? 'Not set') : 'Not set';
-    final stationStatus = _station != null ? (_station!['status'] ?? 'Unknown') : 'Unknown';
-    final stationType = _station != null ? (_station!['type'] ?? 'Unknown') : 'Unknown';
-    final stationPowerOutput = _station != null ? (_station!['power_output'] ?? 'Not set') : 'Not set';
+
+    print("=== STATION DATA DEBUG ===");
+print("Station: ${_station}");
+print("Petrol data: ${_station?['petrol_data']}");
+print("Diesel data: ${_station?['diesel_data']}");
+print("EV data: ${_station?['ev_data']}");
     final stationName = _station != null ? (_station!['name'] ?? 'Unknown') : 'Unknown';
+    final stationType = _station != null ? (_station!['type'] ?? 'Unknown') : 'Unknown';
+    final stationStatus = _station != null ? (_station!['status'] ?? 'Unknown') : 'Unknown';
     final isPending = _station != null && (_station!['verified'] == false || _station!['pending'] == true);
 
     return Scaffold(
@@ -158,11 +337,10 @@ class _OperatorDashboardScreenState extends State<OperatorDashboardScreen> {
                   children: [
                     const SizedBox(height: 8),
 
-                    //  NO STATION YET 
                     if (_station == null) ...[
                       _buildNoStationWidget(),
                     ] else ...[
-                      //  PENDING APPROVAL BANNER
+                      // PENDING APPROVAL BANNER
                       if (isPending)
                         Container(
                           width: double.infinity,
@@ -241,20 +419,17 @@ class _OperatorDashboardScreenState extends State<OperatorDashboardScreen> {
                               ],
                             ),
                             const Divider(height: 28),
-                            _infoRow(Icons.sell_outlined, 'Current Price', stationPrice),
-                            const SizedBox(height: 12),
-                            _infoRow(
-                              Icons.circle,
-                              'Status',
-                              stationStatus,
-                              valueColor: (stationStatus == 'Open' || stationStatus == 'Available')
-                                  ? Colors.green
-                                  : Colors.red,
-                            ),
-                            if (stationType == 'EV') ...[
-                              const SizedBox(height: 12),
-                              _infoRow(Icons.bolt, 'Power Output', stationPowerOutput),
-                            ],
+                            
+                            // STATUS (Always show)
+                            _infoRow(Icons.circle, 'Status', stationStatus,
+                                valueColor: (stationStatus == 'Open' || stationStatus == 'Available')
+                                    ? Colors.green
+                                    : Colors.red),
+                            
+                            const SizedBox(height: 16),
+                            
+                            // FUEL PRICES SECTION (New - shows all individual prices)
+                            _buildFuelPricesSection(_station!),
                           ],
                         ),
                       ),
@@ -333,8 +508,7 @@ class _OperatorDashboardScreenState extends State<OperatorDashboardScreen> {
     );
   }
 
-  /*Widget _buildActionsCard() {
-    final stationType = _station != null ? (_station!['type'] ?? '') : '';
+  Widget _buildActionsCard() {
     final stationStatus = _station != null ? (_station!['status'] ?? '') : '';
     final isOpenOrAvailable = (stationStatus == 'Open' || stationStatus == 'Available');
 
@@ -348,36 +522,18 @@ class _OperatorDashboardScreenState extends State<OperatorDashboardScreen> {
       ),
       child: Column(children: [
         _actionTile(
-          icon: Icons.sell_outlined,
-          iconColor: _brandGreen,
-          title: 'Update Price',
-          subtitle: 'Change your current fuel price',
-          onTap: _showUpdatePriceDialog,
-        ),
-        const Divider(height: 1, indent: 56),
-        _actionTile(
           icon: isOpenOrAvailable ? Icons.lock_outline : Icons.lock_open_outlined,
           iconColor: isOpenOrAvailable ? Colors.red : Colors.green,
           title: isOpenOrAvailable ? 'Mark as Closed' : 'Mark as Open',
           subtitle: 'Update your station availability',
           onTap: _toggleStatus,
         ),
-        if (stationType == 'EV') ...[
-          const Divider(height: 1, indent: 56),
-          _actionTile(
-            icon: Icons.bolt,
-            iconColor: Colors.green.shade600,
-            title: 'Update Power Output',
-            subtitle: 'Change your charger power rating',
-            onTap: _showUpdatePowerDialog,
-          ),
-        ],
         const Divider(height: 1, indent: 56),
         _actionTile(
           icon: Icons.edit_outlined,
           iconColor: Colors.blue.shade600,
           title: 'Edit Station Details',
-          subtitle: 'Update name, phone, fuel types',
+          subtitle: 'Update name, phone, fuel types & prices',
           onTap: () async {
             if (_station != null) {
               final updatedData = await Navigator.push<Map<String, dynamic>>(
@@ -396,60 +552,7 @@ class _OperatorDashboardScreenState extends State<OperatorDashboardScreen> {
         ),
       ]),
     );
-  }*/
-
-
-
-Widget _buildActionsCard() {
-  final stationStatus = _station != null ? (_station!['status'] ?? '') : '';
-  final isOpenOrAvailable = (stationStatus == 'Open' || stationStatus == 'Available');
-
-  return Container(
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      boxShadow: const [
-        BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 2)),
-      ],
-    ),
-    child: Column(children: [
-    
-      _actionTile(
-        icon: isOpenOrAvailable ? Icons.lock_outline : Icons.lock_open_outlined,
-        iconColor: isOpenOrAvailable ? Colors.red : Colors.green,
-        title: isOpenOrAvailable ? 'Mark as Closed' : 'Mark as Open',
-        subtitle: 'Update your station availability',
-        onTap: _toggleStatus,
-      ),
-      
-      const Divider(height: 1, indent: 56),
-      
-      // EDIT STATION DETAILS (This now includes all fuel price editing)
-      _actionTile(
-        icon: Icons.edit_outlined,
-        iconColor: Colors.blue.shade600,
-        title: 'Edit Station Details',
-        subtitle: 'Update name, phone, fuel types & prices',
-        onTap: () async {
-          if (_station != null) {
-            final updatedData = await Navigator.push<Map<String, dynamic>>(
-              context,
-              MaterialPageRoute(
-                builder: (_) => EditStationScreen(station: _station!),
-              ),
-            );
-            if (updatedData != null && mounted) {
-              setState(() {
-                _station = updatedData as Map<String, dynamic>?;
-              });
-            }
-          }
-        },
-      ),
-    ]),
-  );
-}
-
+  }
 
   Widget _infoRow(IconData icon, String label, String value, {Color? valueColor}) {
     return Row(
@@ -502,11 +605,5 @@ Widget _buildActionsCard() {
       trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
       onTap: onTap,
     );
-  }
-
-  @override
-  void dispose() {
-    _priceController.dispose();
-    super.dispose();
   }
 }

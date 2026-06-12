@@ -1481,7 +1481,7 @@ class ApiService {
   }
 
   // ADD STATION (Operator only)
-  static Future<void> addStation({
+  /*static Future<void> addStation({
     required String token,
     required Map<String, dynamic> station,
   }) async {
@@ -1513,7 +1513,31 @@ class ApiService {
     } catch (e) {
       throw Exception('$e');
     }
+  }*/
+
+  
+
+  static Future<void> addStation({
+  required String token,
+  required Map<String, dynamic> station,
+}) async {
+  try {
+    final response = await http.post(
+      Uri.parse('$baseUrl/stations/'),
+      headers: authHeaders(token),
+      body: jsonEncode(station),  // Send as-is
+    ).timeout(const Duration(seconds: 10));
+
+    print('Add station response status: ${response.statusCode}');
+    print('Add station response body: ${response.body}');
+
+    if (response.statusCode != 201) {
+      throw Exception('Failed to add station');
+    }
+  } catch (e) {
+    throw Exception('$e');
   }
+}
 
   // UPDATE STATION (Full update)
   static Future<void> updateStation({

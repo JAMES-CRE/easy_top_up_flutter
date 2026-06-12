@@ -1012,7 +1012,10 @@ class _MainMapScreenState extends State<MainMapScreen> {
                       const SizedBox(height: 32),
 
                       // Reviews section
-                      ReviewsSection(stationId: station['id'] as String),
+                      ReviewsSection(
+                        stationId: station['id'] as String,
+                        stationName: station['name'] as String,
+                      ),
 
                       const SizedBox(height: 24),
 

@@ -661,6 +661,7 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'api_service.dart';
 import 'auth_state.dart';
+import 'package:flutter/services.dart';
 
 class EditStationScreen extends StatefulWidget {
   final Map<String, dynamic> station;
@@ -683,14 +684,14 @@ class _EditStationScreenState extends State<EditStationScreen> {
   final TextEditingController _latController = TextEditingController();
   final TextEditingController _lngController = TextEditingController();
   final TextEditingController _lpgPriceController = TextEditingController();
-  
-  // FUEL TYPE 
+
+  // FUEL TYPE
   late String _fuelType;
 
   // PETROL/DIESEL PREMIUM VARIABLES
   bool _sellsPetrol = false;
   List<Map<String, dynamic>> _petrolOctanes = [];
-  
+
   bool _sellsDiesel = false;
   List<Map<String, dynamic>> _dieselTypes = [];
 
@@ -715,7 +716,7 @@ class _EditStationScreenState extends State<EditStationScreen> {
     _loadStationData();
   }
 
-  void _loadStationData() {
+  /*void _loadStationData() {
     final station = widget.station;
     _fuelType = station['type'] ?? 'Unknown';
 
@@ -726,34 +727,29 @@ class _EditStationScreenState extends State<EditStationScreen> {
     _lngController.text = (station['lng'] ?? 0.0).toString();
 
     // Load PREMIUM PETROL data
-    if (station['petrol'] != null) {
-      _sellsPetrol = station['petrol']['available'] ?? false;
-      final octanes = station['petrol']['octane_ratings'];
+
+    if (station['petrol_data'] != null) {
+      _sellsPetrol = station['petrol_data'].get('available', false);
+      final octanes = station['petrol_data'].get('octane_ratings');
       if (octanes != null && octanes is List) {
-        _petrolOctanes = List<Map<String, dynamic>>.from(octanes.map((o) => {
-          'name': o['name'] ?? '',
-          'price': o['price']?.toString() ?? '',
-          'inStock': o['in_stock'] ?? true,
-        }));
+        _petrolOctanes = List<Map<String, dynamic>>.from(octanes.map((o) => ({
+              'name': o['name'] ?? '',
+              'price': o['price']?.toString() ?? '',
+              'inStock': o['in_stock'] ?? true,
+            })));
       }
-    } else if (station['octane'] != null) {
-      // Backward compatibility for old stations
-      _sellsPetrol = true;
-      _petrolOctanes = [
-        {'name': station['octane'], 'price': _extractPriceNumber(station['price'] ?? ''), 'inStock': true},
-      ];
     }
 
-    // Load PREMIUM DIESEL data
-    if (station['diesel'] != null) {
-      _sellsDiesel = station['diesel']['available'] ?? false;
-      final diesels = station['diesel']['diesel_types'];
+// Load PREMIUM DIESEL data (from diesel_data field - SEPARATE!)
+    if (station['diesel_data'] != null) {
+      _sellsDiesel = station['diesel_data'].get('available', false);
+      final diesels = station['diesel_data'].get('diesel_types');
       if (diesels != null && diesels is List) {
         _dieselTypes = List<Map<String, dynamic>>.from(diesels.map((d) => ({
-          'name': d['name'] ?? '',
-          'price': d['price']?.toString() ?? '',
-          'inStock': d['in_stock'] ?? true,
-        })));
+              'name': d['name'] ?? '',
+              'price': d['price']?.toString() ?? '',
+              'inStock': d['in_stock'] ?? true,
+            })));
       }
     }
 
@@ -771,12 +767,13 @@ class _EditStationScreenState extends State<EditStationScreen> {
     if (_fuelType == 'EV') {
       final chargingPoints = station['charging_points'];
       if (chargingPoints != null && chargingPoints is List) {
-        _chargingPoints = List<Map<String, dynamic>>.from(chargingPoints.map((c) => ({
-          'connector': c['connector'] ?? 'CCS',
-          'power': c['power_kw']?.toString() ?? '150',
-          'price': c['price_per_kwh']?.toString() ?? '',
-          'available': c['available'] ?? true,
-        })));
+        _chargingPoints =
+            List<Map<String, dynamic>>.from(chargingPoints.map((c) => ({
+                  'connector': c['connector'] ?? 'CCS',
+                  'power': c['power_kw']?.toString() ?? '150',
+                  'price': c['price_per_kwh']?.toString() ?? '',
+                  'available': c['available'] ?? true,
+                })));
       } else if (station['connector'] != null) {
         // Backward compatibility for old EV stations
         _chargingPoints = [
@@ -796,7 +793,112 @@ class _EditStationScreenState extends State<EditStationScreen> {
     if (photos != null && photos is List) {
       _existingPhotoUrls = List<String>.from(photos);
     }
+  }*/
+
+void _loadStationData() {
+  final station = widget.station;
+  _fuelType = station['type'] ?? 'Unknown';
+
+  _nameController.text = station['name'] ?? '';
+  _phoneController.text = station['phone'] ?? '';
+  _whatsappController.text = station['whatsapp'] ?? '';
+  _latController.text = (station['lat'] ?? 0.0).toString();
+  _lngController.text = (station['lng'] ?? 0.0).toString();
+
+  // Load PREMIUM PETROL data (from 'petrol' field - API format)
+  if (station['petrol'] != null) {
+    _sellsPetrol = true;
+    final octanes = station['petrol']['octane_ratings'];
+    if (octanes != null && octanes is List) {
+      _petrolOctanes = List<Map<String, dynamic>>.from(octanes.map((o) => ({
+        'name': o['name'] ?? '',
+        'price': o['price']?.toString() ?? '',
+        'inStock': o['in_stock'] ?? true,
+      })));
+    }
+  } else if (station['petrol_data'] != null) {
+    // Fallback for old data format
+    _sellsPetrol = station['petrol_data'].get('available', false);
+    final octanes = station['petrol_data'].get('octane_ratings');
+    if (octanes != null && octanes is List) {
+      _petrolOctanes = List<Map<String, dynamic>>.from(octanes.map((o) => ({
+        'name': o['name'] ?? '',
+        'price': o['price']?.toString() ?? '',
+        'inStock': o['in_stock'] ?? true,
+      })));
+    }
   }
+
+  // Load PREMIUM DIESEL data (from 'diesel' field - API format)
+  if (station['diesel'] != null) {
+    _sellsDiesel = true;
+    final diesels = station['diesel']['diesel_types'];
+    if (diesels != null && diesels is List) {
+      _dieselTypes = List<Map<String, dynamic>>.from(diesels.map((d) => ({
+        'name': d['name'] ?? '',
+        'price': d['price']?.toString() ?? '',
+        'inStock': d['in_stock'] ?? true,
+      })));
+    }
+  } else if (station['diesel_data'] != null) {
+    // Fallback for old data format
+    _sellsDiesel = station['diesel_data'].get('available', false);
+    final diesels = station['diesel_data'].get('diesel_types');
+    if (diesels != null && diesels is List) {
+      _dieselTypes = List<Map<String, dynamic>>.from(diesels.map((d) => ({
+        'name': d['name'] ?? '',
+        'price': d['price']?.toString() ?? '',
+        'inStock': d['in_stock'] ?? true,
+      })));
+    }
+  }
+
+  // Load LPG data
+  if (_fuelType == 'LPG') {
+    final lpgTypes = station['lpg_type'];
+    if (lpgTypes != null && lpgTypes is List) {
+      _selectedLpgTypes = Set<String>.from(lpgTypes);
+    }
+    _deliveryAvailable = station['delivery_available'] == true;
+    
+    // Extract price number from string like "GH₵ 12.70/kg"
+    final priceStr = station['price'] ?? '';
+    final match = RegExp(r'[\d.]+').firstMatch(priceStr);
+    _lpgPriceController.text = match?.group(0) ?? '';
+  }
+
+  // Load PREMIUM EV data (from 'charging_points' field - API format)
+  if (_fuelType == 'EV') {
+    final chargingPoints = station['charging_points'];
+    if (chargingPoints != null && chargingPoints is List) {
+      _chargingPoints = List<Map<String, dynamic>>.from(chargingPoints.map((c) => ({
+        'connector': c['connector'] ?? 'CCS',
+        'power': c['power_kw']?.toString() ?? '150',
+        'price': c['price_per_kwh']?.toString() ?? '',
+        'available': c['available'] ?? true,
+      })));
+    } else if (station['ev_data'] != null) {
+      // Fallback for old data format
+      final evData = station['ev_data'];
+      if (evData is List) {
+        _chargingPoints = List<Map<String, dynamic>>.from(evData.map((c) => ({
+          'connector': c['connector'] ?? 'CCS',
+          'power': c['power_kw']?.toString() ?? '150',
+          'price': c['price_per_kwh']?.toString() ?? '',
+          'available': c['available'] ?? true,
+        })));
+      }
+    }
+    _hasBackupGenerator = station['has_backup_generator'] == true;
+  }
+
+  // Load existing photos
+  final photos = station['photos'];
+  if (photos != null && photos is List) {
+    _existingPhotoUrls = List<String>.from(photos);
+  }
+}
+
 
   // Helper to extract number from price string
   String _extractPriceNumber(String priceString) {
@@ -833,7 +935,8 @@ class _EditStationScreenState extends State<EditStationScreen> {
   // EV HELPER FUNCTIONS
   void _addChargingPoint() {
     setState(() {
-      _chargingPoints.add({'connector': 'CCS', 'power': '150', 'price': '', 'available': true});
+      _chargingPoints.add(
+          {'connector': 'CCS', 'power': '150', 'price': '', 'available': true});
     });
   }
 
@@ -843,7 +946,7 @@ class _EditStationScreenState extends State<EditStationScreen> {
     });
   }
 
-  // PHOTO PICKER 
+  // PHOTO PICKER
   Future<void> _pickPhotos() async {
     if (_existingPhotoUrls.length + _newPhotos.length >= 4) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -873,7 +976,9 @@ class _EditStationScreenState extends State<EditStationScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text('Add Photo', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                const Text('Add Photo',
+                    style:
+                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 ListTile(
                   leading: Container(
@@ -894,7 +999,8 @@ class _EditStationScreenState extends State<EditStationScreen> {
                       color: Colors.blue.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Icon(Icons.photo_library, color: Colors.blue.shade600),
+                    child:
+                        Icon(Icons.photo_library, color: Colors.blue.shade600),
                   ),
                   title: const Text('Choose from gallery'),
                   onTap: () => Navigator.pop(context, ImageSource.gallery),
@@ -948,8 +1054,8 @@ class _EditStationScreenState extends State<EditStationScreen> {
     }
   }
 
-  // SAVE CHANGES 
-  Future<void> _saveChanges() async {
+  // SAVE CHANGES
+ /* Future<void> _saveChanges() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isSaving = true);
@@ -968,46 +1074,54 @@ class _EditStationScreenState extends State<EditStationScreen> {
         'photos': allPhotoUrls,
       };
 
-      // Add PREMIUM PETROL/DIESEL data
+      // Add fuel type specific fields
       if (_fuelType == 'Petrol/Diesel') {
+        // PETROL data - goes to petrol_data field
         if (_sellsPetrol && _petrolOctanes.isNotEmpty) {
-          updatedData['petrol'] = {
+          updatedData['petrol_data'] = {
             'available': true,
-            'octane_ratings': _petrolOctanes.map((o) => {
-              'name': o['name'],
-              'price': double.tryParse(o['price']) ?? 0,
-              'in_stock': o['inStock'],
-            }).toList(),
+            'octane_ratings': _petrolOctanes
+                .map((o) => ({
+                      'name': o['name'],
+                      'price': double.tryParse(o['price']) ?? 0,
+                      'in_stock': o['inStock'],
+                    }))
+                .toList(),
           };
         }
-        
+
+        // DIESEL data - goes to diesel_data field (SEPARATE!)
         if (_sellsDiesel && _dieselTypes.isNotEmpty) {
-          updatedData['diesel'] = {
+          updatedData['diesel_data'] = {
             'available': true,
-            'diesel_types': _dieselTypes.map((d) => {
-              'name': d['name'],
-              'price': double.tryParse(d['price']) ?? 0,
-              'in_stock': d['inStock'],
-            }).toList(),
+            'diesel_types': _dieselTypes
+                .map((d) => ({
+                      'name': d['name'],
+                      'price': double.tryParse(d['price']) ?? 0,
+                      'in_stock': d['inStock'],
+                    }))
+                .toList(),
           };
         }
       }
-      
+
       // Add LPG data
       if (_fuelType == 'LPG') {
         updatedData['lpg_type'] = _selectedLpgTypes.toList();
         updatedData['price'] = 'GH₵ ${_lpgPriceController.text.trim()}/kg';
         updatedData['delivery_available'] = _deliveryAvailable;
       }
-      
+
       // Add PREMIUM EV data
       if (_fuelType == 'EV') {
-        updatedData['charging_points'] = _chargingPoints.map((c) => {
-          'connector': c['connector'],
-          'power_kw': int.tryParse(c['power']) ?? 0,
-          'price_per_kwh': double.tryParse(c['price']) ?? 0,
-          'available': c['available'],
-        }).toList();
+        updatedData['charging_points'] = _chargingPoints
+            .map((c) => {
+                  'connector': c['connector'],
+                  'power_kw': int.tryParse(c['power']) ?? 0,
+                  'price_per_kwh': double.tryParse(c['price']) ?? 0,
+                  'available': c['available'],
+                })
+            .toList();
         updatedData['has_backup_generator'] = _hasBackupGenerator;
       }
 
@@ -1041,7 +1155,100 @@ class _EditStationScreenState extends State<EditStationScreen> {
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
+  }*/
+
+Future<void> _saveChanges() async {
+  if (!_formKey.currentState!.validate()) return;
+
+  setState(() => _isSaving = true);
+
+  try {
+    final newPhotoUrls = await _uploadNewPhotos();
+    final allPhotoUrls = [..._existingPhotoUrls, ...newPhotoUrls];
+
+    final Map<String, dynamic> updatedData = {
+      'name': _nameController.text.trim(),
+      'type': _fuelType,
+      'phone': _phoneController.text.trim(),
+      'whatsapp': _whatsappController.text.trim(),
+      'lat': double.tryParse(_latController.text.trim()) ?? 0.0,
+      'lng': double.tryParse(_lngController.text.trim()) ?? 0.0,
+      'photos': allPhotoUrls,
+    };
+
+    // Add fuel type specific fields using API format
+    if (_fuelType == 'Petrol/Diesel') {
+      // PETROL data - send as 'petrol' (API expects this)
+      if (_sellsPetrol && _petrolOctanes.isNotEmpty) {
+        updatedData['petrol'] = {
+          'available': true,
+          'octane_ratings': _petrolOctanes.map((o) => ({
+            'name': o['name'],
+            'price': double.tryParse(o['price']) ?? 0,
+            'in_stock': o['inStock'],
+          })).toList(),
+        };
+      }
+      
+      // DIESEL data - send as 'diesel' (API expects this)
+      if (_sellsDiesel && _dieselTypes.isNotEmpty) {
+        updatedData['diesel'] = {
+          'available': true,
+          'diesel_types': _dieselTypes.map((d) => ({
+            'name': d['name'],
+            'price': double.tryParse(d['price']) ?? 0,
+            'in_stock': d['inStock'],
+          })).toList(),
+        };
+      }
+      
+    } else if (_fuelType == 'LPG') {
+      updatedData['lpg_type'] = _selectedLpgTypes.toList();
+      updatedData['price'] = 'GH₵ ${_lpgPriceController.text.trim()}/kg';
+      updatedData['delivery_available'] = _deliveryAvailable;
+      
+    } else if (_fuelType == 'EV') {
+      // EV data - send as 'charging_points' (API expects this)
+      updatedData['charging_points'] = _chargingPoints.map((c) => ({
+        'connector': c['connector'],
+        'power_kw': int.tryParse(c['power']) ?? 0,
+        'price_per_kwh': double.tryParse(c['price']) ?? 0,
+        'available': c['available'],
+      })).toList();
+      updatedData['has_backup_generator'] = _hasBackupGenerator;
+    }
+
+    print("=== SAVING EDIT DATA ===");
+    print(updatedData);
+
+    final token = AuthState.instance.token ?? '';
+    await ApiService.updateStation(
+      token: token,
+      stationId: widget.station['id'],
+      updatedData: updatedData,
+    );
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Station updated successfully!')),
+    );
+    Navigator.pop(context, updatedData);
+  } catch (e) {
+    print('Update error: $e');
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
+    );
+  } finally {
+    if (mounted) setState(() => _isSaving = false);
+
+   
   }
+  
+}
+
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -1055,11 +1262,14 @@ class _EditStationScreenState extends State<EditStationScreen> {
         title: Text(
           'Edit Station',
           style: GoogleFonts.poppins(
-            textStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+            textStyle: const TextStyle(
+                fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
           ),
         ),
         actions: [
-          IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
+          IconButton(
+              icon: const Icon(Icons.close),
+              onPressed: () => Navigator.pop(context)),
         ],
       ),
       body: SingleChildScrollView(
@@ -1075,7 +1285,9 @@ class _EditStationScreenState extends State<EditStationScreen> {
               _textField(
                 controller: _nameController,
                 hint: 'Station name',
-                validator: (v) => v == null || v.trim().isEmpty ? 'Please enter station name' : null,
+                validator: (v) => v == null || v.trim().isEmpty
+                    ? 'Please enter station name'
+                    : null,
               ),
 
               const SizedBox(height: 20),
@@ -1085,13 +1297,16 @@ class _EditStationScreenState extends State<EditStationScreen> {
               const SizedBox(height: 8),
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 decoration: BoxDecoration(
                   color: Colors.grey.shade100,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.grey.shade300),
                 ),
-                child: Text(_fuelType, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
+                child: Text(_fuelType,
+                    style: const TextStyle(
+                        fontSize: 15, fontWeight: FontWeight.w500)),
               ),
 
               const SizedBox(height: 20),
@@ -1103,21 +1318,22 @@ class _EditStationScreenState extends State<EditStationScreen> {
                   children: [
                     Checkbox(
                       value: _sellsPetrol,
-                      onChanged: (val) => setState(() => _sellsPetrol = val ?? true),
+                      onChanged: (val) =>
+                          setState(() => _sellsPetrol = val ?? true),
                       activeColor: _brandGreen,
                     ),
                     const Text(
                       'Sells Petrol',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
-                
+
                 if (_sellsPetrol) ...[
                   const SizedBox(height: 8),
                   _sectionLabel('Octane Ratings (with prices)'),
                   const SizedBox(height: 8),
-                  
                   ..._petrolOctanes.asMap().entries.map((entry) {
                     int index = entry.key;
                     var octane = entry.value;
@@ -1150,7 +1366,8 @@ class _EditStationScreenState extends State<EditStationScreen> {
                               ),
                               const SizedBox(width: 8),
                               IconButton(
-                                icon: const Icon(Icons.delete, color: Colors.red),
+                                icon:
+                                    const Icon(Icons.delete, color: Colors.red),
                                 onPressed: () => _removePetrolOctane(index),
                               ),
                             ],
@@ -1182,7 +1399,8 @@ class _EditStationScreenState extends State<EditStationScreen> {
                                     value: octane['inStock'],
                                     onChanged: (val) {
                                       setState(() {
-                                        _petrolOctanes[index]['inStock'] = val ?? true;
+                                        _petrolOctanes[index]['inStock'] =
+                                            val ?? true;
                                       });
                                     },
                                     activeColor: _brandGreen,
@@ -1196,7 +1414,6 @@ class _EditStationScreenState extends State<EditStationScreen> {
                       ),
                     );
                   }),
-                  
                   TextButton.icon(
                     onPressed: _addPetrolOctane,
                     icon: const Icon(Icons.add, size: 18),
@@ -1206,29 +1423,30 @@ class _EditStationScreenState extends State<EditStationScreen> {
                     ),
                   ),
                 ],
-                
+
                 const Divider(height: 32),
-                
+
                 // DIESEL SECTION
                 Row(
                   children: [
                     Checkbox(
                       value: _sellsDiesel,
-                      onChanged: (val) => setState(() => _sellsDiesel = val ?? false),
+                      onChanged: (val) =>
+                          setState(() => _sellsDiesel = val ?? false),
                       activeColor: _brandGreen,
                     ),
                     const Text(
                       'Sells Diesel',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
-                
+
                 if (_sellsDiesel) ...[
                   const SizedBox(height: 8),
                   _sectionLabel('Diesel Types (with prices)'),
                   const SizedBox(height: 8),
-                  
                   ..._dieselTypes.asMap().entries.map((entry) {
                     int index = entry.key;
                     var diesel = entry.value;
@@ -1249,7 +1467,8 @@ class _EditStationScreenState extends State<EditStationScreen> {
                                   initialValue: diesel['name'],
                                   decoration: const InputDecoration(
                                     labelText: 'Diesel Type',
-                                    hintText: 'e.g. Regular Diesel, Premium Diesel, Biodiesel',
+                                    hintText:
+                                        'e.g. Regular Diesel, Premium Diesel, Biodiesel',
                                     border: OutlineInputBorder(),
                                   ),
                                   onChanged: (val) {
@@ -1261,7 +1480,8 @@ class _EditStationScreenState extends State<EditStationScreen> {
                               ),
                               const SizedBox(width: 8),
                               IconButton(
-                                icon: const Icon(Icons.delete, color: Colors.red),
+                                icon:
+                                    const Icon(Icons.delete, color: Colors.red),
                                 onPressed: () => _removeDieselType(index),
                               ),
                             ],
@@ -1293,7 +1513,8 @@ class _EditStationScreenState extends State<EditStationScreen> {
                                     value: diesel['inStock'],
                                     onChanged: (val) {
                                       setState(() {
-                                        _dieselTypes[index]['inStock'] = val ?? true;
+                                        _dieselTypes[index]['inStock'] =
+                                            val ?? true;
                                       });
                                     },
                                     activeColor: _brandGreen,
@@ -1307,7 +1528,6 @@ class _EditStationScreenState extends State<EditStationScreen> {
                       ),
                     );
                   }),
-                  
                   TextButton.icon(
                     onPressed: _addDieselType,
                     icon: const Icon(Icons.add, size: 18),
@@ -1317,7 +1537,7 @@ class _EditStationScreenState extends State<EditStationScreen> {
                     ),
                   ),
                 ],
-                
+
                 const SizedBox(height: 20),
               ],
 
@@ -1331,18 +1551,23 @@ class _EditStationScreenState extends State<EditStationScreen> {
                     final isSelected = _selectedLpgTypes.contains(t);
                     return FilterChip(
                       avatar: Icon(
-                        t == 'Autogas' ? Icons.directions_car : Icons.propane_tank,
+                        t == 'Autogas'
+                            ? Icons.directions_car
+                            : Icons.propane_tank,
                         size: 16,
                         color: isSelected ? Colors.white : Colors.blue.shade600,
                       ),
                       label: Text(t),
                       selected: isSelected,
                       selectedColor: Colors.blue.shade600,
-                      labelStyle: TextStyle(color: isSelected ? Colors.white : Colors.black87),
+                      labelStyle: TextStyle(
+                          color: isSelected ? Colors.white : Colors.black87),
                       onSelected: (selected) {
                         setState(() {
-                          if (selected) _selectedLpgTypes.add(t);
-                          else _selectedLpgTypes.remove(t);
+                          if (selected)
+                            _selectedLpgTypes.add(t);
+                          else
+                            _selectedLpgTypes.remove(t);
                         });
                       },
                     );
@@ -1362,20 +1587,22 @@ class _EditStationScreenState extends State<EditStationScreen> {
                   children: [
                     Checkbox(
                       value: _deliveryAvailable,
-                      onChanged: (val) => setState(() => _deliveryAvailable = val ?? false),
+                      onChanged: (val) =>
+                          setState(() => _deliveryAvailable = val ?? false),
                       activeColor: _brandGreen,
                     ),
-                    const Text('Home Delivery Available', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                    const Text('Home Delivery Available',
+                        style: TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w500)),
                   ],
                 ),
                 const SizedBox(height: 20),
               ],
 
               // ========== EV PREMIUM SECTION ==========
-              if (_fuelType == 'EV') ...[
+              /*if (_fuelType == 'EV') ...[
                 _sectionLabel('Charging Points'),
                 const SizedBox(height: 8),
-                
                 ..._chargingPoints.asMap().entries.map((entry) {
                   int index = entry.key;
                   var point = entry.value;
@@ -1399,12 +1626,18 @@ class _EditStationScreenState extends State<EditStationScreen> {
                                   border: OutlineInputBorder(),
                                 ),
                                 items: const [
-                                  DropdownMenuItem(value: 'CCS', child: Text('CCS')),
-                                  DropdownMenuItem(value: 'Type 2', child: Text('Type 2')),
-                                  DropdownMenuItem(value: 'CHAdeMO', child: Text('CHAdeMO')),
-                                  DropdownMenuItem(value: 'Tesla', child: Text('Tesla')),
-                                  DropdownMenuItem(value: 'Type 1', child: Text('Type 1')),
-                                  DropdownMenuItem(value: 'GB/T', child: Text('GB/T')),
+                                  DropdownMenuItem(
+                                      value: 'CCS', child: Text('CCS')),
+                                  DropdownMenuItem(
+                                      value: 'Type 2', child: Text('Type 2')),
+                                  DropdownMenuItem(
+                                      value: 'CHAdeMO', child: Text('CHAdeMO')),
+                                  DropdownMenuItem(
+                                      value: 'Tesla', child: Text('Tesla')),
+                                  DropdownMenuItem(
+                                      value: 'Type 1', child: Text('Type 1')),
+                                  DropdownMenuItem(
+                                      value: 'GB/T', child: Text('GB/T')),
                                 ],
                                 onChanged: (val) {
                                   setState(() {
@@ -1465,7 +1698,8 @@ class _EditStationScreenState extends State<EditStationScreen> {
                                   value: point['available'],
                                   onChanged: (val) {
                                     setState(() {
-                                      _chargingPoints[index]['available'] = val ?? true;
+                                      _chargingPoints[index]['available'] =
+                                          val ?? true;
                                     });
                                   },
                                   activeColor: _brandGreen,
@@ -1479,7 +1713,6 @@ class _EditStationScreenState extends State<EditStationScreen> {
                     ),
                   );
                 }),
-                
                 TextButton.icon(
                   onPressed: _addChargingPoint,
                   icon: const Icon(Icons.add, size: 18),
@@ -1488,23 +1721,168 @@ class _EditStationScreenState extends State<EditStationScreen> {
                     foregroundColor: _brandGreen,
                   ),
                 ),
-                
                 const SizedBox(height: 16),
                 Row(
                   children: [
                     Checkbox(
                       value: _hasBackupGenerator,
-                      onChanged: (val) => setState(() => _hasBackupGenerator = val ?? false),
+                      onChanged: (val) =>
+                          setState(() => _hasBackupGenerator = val ?? false),
                       activeColor: _brandGreen,
                     ),
-                    const Text('Has Backup Generator', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                    const Text('Has Backup Generator',
+                        style: TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w500)),
                   ],
                 ),
                 const SizedBox(height: 20),
-              ],
+              ],*/
 
-              // PHOTO SECTION 
-              _sectionLabel(totalPhotos == 0 ? 'Add Photos (Optional, max 4)' : 'Photos • $totalPhotos/4'),
+// EV SECTION (Premium - Multiple charging points)
+if (_fuelType == 'EV') ...[
+  const SizedBox(height: 20),
+  _sectionLabel('Charging Points'),
+  const SizedBox(height: 8),
+  
+  ..._chargingPoints.asMap().entries.map((entry) {
+    int index = entry.key;
+    var point = entry.value;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  value: point['connector'],
+                  decoration: const InputDecoration(
+                    labelText: 'Connector Type',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'CCS', child: Text('CCS')),
+                    DropdownMenuItem(value: 'Type 2', child: Text('Type 2')),
+                    DropdownMenuItem(value: 'CHAdeMO', child: Text('CHAdeMO')),
+                    DropdownMenuItem(value: 'Tesla', child: Text('Tesla')),
+                    DropdownMenuItem(value: 'Type 1', child: Text('Type 1')),
+                    DropdownMenuItem(value: 'GB/T', child: Text('GB/T')),
+                  ],
+                  onChanged: (val) {
+                    setState(() {
+                      _chargingPoints[index]['connector'] = val;
+                    });
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                icon: const Icon(Icons.delete, color: Colors.red),
+                onPressed: () => _removeChargingPoint(index),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  initialValue: point['power'],
+                  decoration: const InputDecoration(
+                    labelText: 'Power Output',
+                    hintText: 'e.g. 50, 150, 350',
+                    suffixText: 'kW',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.number,
+                  onChanged: (val) {
+                    setState(() {
+                      _chargingPoints[index]['power'] = val;
+                    });
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextFormField(
+                  initialValue: point['price'],
+                  style: const TextStyle(fontSize: 12),
+                  decoration: const InputDecoration(
+                    labelText: 'Price',
+                    hintText: 'e.g. 5.50',
+                    suffixText: 'GH₵/kWh',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$')),
+                  ],
+                  onChanged: (val) {
+                    setState(() {
+                      _chargingPoints[index]['price'] = val;
+                    });
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              Row(
+                children: [
+                  Checkbox(
+                    value: point['available'],
+                    onChanged: (val) {
+                      setState(() {
+                        _chargingPoints[index]['available'] = val ?? true;
+                      });
+                    },
+                    activeColor: _brandGreen,
+                  ),
+                  const Text('Available'),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }),
+  
+  TextButton.icon(
+    onPressed: _addChargingPoint,
+    icon: const Icon(Icons.add, size: 18),
+    label: const Text('Add Charging Point'),
+    style: TextButton.styleFrom(
+      foregroundColor: _brandGreen,
+    ),
+  ),
+  
+  const SizedBox(height: 16),
+  Row(
+    children: [
+      Checkbox(
+        value: _hasBackupGenerator,
+        onChanged: (val) =>
+            setState(() => _hasBackupGenerator = val ?? false),
+        activeColor: _brandGreen,
+      ),
+      const Text(
+        'Has Backup Generator',
+        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+      ),
+    ],
+  ),
+],
+
+
+              // PHOTO SECTION
+              _sectionLabel(totalPhotos == 0
+                  ? 'Add Photos (Optional, max 4)'
+                  : 'Photos • $totalPhotos/4'),
               const SizedBox(height: 10),
               SizedBox(
                 height: 100,
@@ -1517,20 +1895,29 @@ class _EditStationScreenState extends State<EditStationScreen> {
                       return Stack(
                         children: [
                           Container(
-                            width: 90, height: 90, margin: const EdgeInsets.only(right: 10),
+                            width: 90,
+                            height: 90,
+                            margin: const EdgeInsets.only(right: 10),
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(12),
-                              image: DecorationImage(image: NetworkImage(photoUrl), fit: BoxFit.cover),
+                              image: DecorationImage(
+                                  image: NetworkImage(photoUrl),
+                                  fit: BoxFit.cover),
                             ),
                           ),
                           Positioned(
-                            top: 4, right: 14,
+                            top: 4,
+                            right: 14,
                             child: GestureDetector(
                               onTap: () => _removeExistingPhoto(index),
                               child: Container(
-                                width: 22, height: 22,
-                                decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
-                                child: const Icon(Icons.close, size: 14, color: Colors.white),
+                                width: 22,
+                                height: 22,
+                                decoration: const BoxDecoration(
+                                    color: Colors.black54,
+                                    shape: BoxShape.circle),
+                                child: const Icon(Icons.close,
+                                    size: 14, color: Colors.white),
                               ),
                             ),
                           ),
@@ -1543,20 +1930,29 @@ class _EditStationScreenState extends State<EditStationScreen> {
                       return Stack(
                         children: [
                           Container(
-                            width: 90, height: 90, margin: const EdgeInsets.only(right: 10),
+                            width: 90,
+                            height: 90,
+                            margin: const EdgeInsets.only(right: 10),
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(12),
-                              image: DecorationImage(image: FileImage(File(photo.path)), fit: BoxFit.cover),
+                              image: DecorationImage(
+                                  image: FileImage(File(photo.path)),
+                                  fit: BoxFit.cover),
                             ),
                           ),
                           Positioned(
-                            top: 4, right: 14,
+                            top: 4,
+                            right: 14,
                             child: GestureDetector(
                               onTap: () => _removeNewPhoto(index),
                               child: Container(
-                                width: 22, height: 22,
-                                decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
-                                child: const Icon(Icons.close, size: 14, color: Colors.white),
+                                width: 22,
+                                height: 22,
+                                decoration: const BoxDecoration(
+                                    color: Colors.black54,
+                                    shape: BoxShape.circle),
+                                child: const Icon(Icons.close,
+                                    size: 14, color: Colors.white),
                               ),
                             ),
                           ),
@@ -1567,18 +1963,23 @@ class _EditStationScreenState extends State<EditStationScreen> {
                       GestureDetector(
                         onTap: _pickPhotos,
                         child: Container(
-                          width: 90, height: 90,
+                          width: 90,
+                          height: 90,
                           decoration: BoxDecoration(
                             color: Colors.grey[100],
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.grey.shade300, width: 1.5),
+                            border: Border.all(
+                                color: Colors.grey.shade300, width: 1.5),
                           ),
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.add_a_photo_outlined, color: Colors.grey[500], size: 28),
+                              Icon(Icons.add_a_photo_outlined,
+                                  color: Colors.grey[500], size: 28),
                               const SizedBox(height: 4),
-                              Text('Add Photo', style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+                              Text('Add Photo',
+                                  style: TextStyle(
+                                      fontSize: 12, color: Colors.grey[500])),
                             ],
                           ),
                         ),
@@ -1589,26 +1990,31 @@ class _EditStationScreenState extends State<EditStationScreen> {
 
               const SizedBox(height: 20),
 
-              // PHONE 
+              // PHONE
               _sectionLabel('Phone Number'),
               const SizedBox(height: 8),
               _textField(
                 controller: _phoneController,
                 hint: 'e.g. +233244000000',
                 keyboard: TextInputType.phone,
-                validator: (v) => v == null || v.trim().isEmpty ? 'Please enter phone number' : null,
+                validator: (v) => v == null || v.trim().isEmpty
+                    ? 'Please enter phone number'
+                    : null,
               ),
 
               const SizedBox(height: 20),
 
-              // WHATSAPP 
+              // WHATSAPP
               _sectionLabel('WhatsApp Number (Optional)'),
               const SizedBox(height: 8),
-              _textField(controller: _whatsappController, hint: 'e.g. +233244000000', keyboard: TextInputType.phone),
+              _textField(
+                  controller: _whatsappController,
+                  hint: 'e.g. +233244000000',
+                  keyboard: TextInputType.phone),
 
               const SizedBox(height: 20),
 
-              // LOCATION 
+              // LOCATION
               _sectionLabel('Station Location (GPS Coordinates)'),
               const SizedBox(height: 4),
               const Text(
@@ -1622,7 +2028,8 @@ class _EditStationScreenState extends State<EditStationScreen> {
                     child: _textField(
                       controller: _latController,
                       hint: 'Latitude e.g. 5.6037',
-                      keyboard: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                      keyboard: const TextInputType.numberWithOptions(
+                          decimal: true, signed: true),
                       validator: (v) {
                         if (v == null || v.trim().isEmpty) return 'Required';
                         if (double.tryParse(v.trim()) == null) return 'Invalid';
@@ -1635,7 +2042,8 @@ class _EditStationScreenState extends State<EditStationScreen> {
                     child: _textField(
                       controller: _lngController,
                       hint: 'Longitude e.g. -0.1870',
-                      keyboard: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                      keyboard: const TextInputType.numberWithOptions(
+                          decimal: true, signed: true),
                       validator: (v) {
                         if (v == null || v.trim().isEmpty) return 'Required';
                         if (double.tryParse(v.trim()) == null) return 'Invalid';
@@ -1648,7 +2056,7 @@ class _EditStationScreenState extends State<EditStationScreen> {
 
               const SizedBox(height: 40),
 
-              // SAVE BUTTON 
+              // SAVE BUTTON
               SizedBox(
                 width: double.infinity,
                 height: 52,
@@ -1657,11 +2065,17 @@ class _EditStationScreenState extends State<EditStationScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _brandGreen,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16)),
                   ),
                   child: _isSaving || _isUploading
-                      ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white))
-                      : const Text('Save Changes', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(color: Colors.white))
+                      : const Text('Save Changes',
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
               ),
               const SizedBox(height: 32),
@@ -1675,7 +2089,11 @@ class _EditStationScreenState extends State<EditStationScreen> {
   Widget _sectionLabel(String text) {
     return Text(
       text.toUpperCase(),
-      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey, letterSpacing: 1.2),
+      style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: Colors.grey,
+          letterSpacing: 1.2),
     );
   }
 
@@ -1713,3 +2131,5 @@ class _EditStationScreenState extends State<EditStationScreen> {
     super.dispose();
   }
 }
+
+

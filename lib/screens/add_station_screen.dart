@@ -2055,7 +2055,7 @@ class _AddStationScreenState extends State<AddStationScreen> {
   }
 
   // SUBMIT
-  Future<void> _submit() async {
+  /*Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
     // Validate fuel type specific fields
@@ -2084,7 +2084,7 @@ class _AddStationScreenState extends State<AddStationScreen> {
     try {
       final photoUrls = await _uploadPhotos();
 
-      final Map<String, dynamic> newStation = {
+      /*final Map<String, dynamic> newStation = {
         'name': _nameController.text.trim(),
         'type': _selectedFuelType,
         'lat': double.tryParse(_latController.text.trim()) ?? 0.0,
@@ -2144,7 +2144,77 @@ class _AddStationScreenState extends State<AddStationScreen> {
         if (_chargingPoints.isNotEmpty && _chargingPoints[0]['price'].isNotEmpty) {
           newStation['price'] = 'GH₵ ${_chargingPoints[0]['price']}/kWh';
         }
+      }*/
+  final Map<String, dynamic> newStation = {
+  'name': _nameController.text.trim(),
+  'type': _selectedFuelType,
+  'lat': double.tryParse(_latController.text.trim()) ?? 0.0,
+  'lng': double.tryParse(_lngController.text.trim()) ?? 0.0,
+  'status': 'Open',
+  'phone': _phoneController.text.trim(),
+  'whatsapp': _whatsappController.text.trim(),
+  'photos': photoUrls.isNotEmpty ? photoUrls : [],
+};
+
+// Add fuel type specific fields - CORRECT FORMAT
+if (_selectedFuelType == 'Petrol/Diesel') {
+  // Petrol data - send as 'petrol_data'
+  if (_sellsPetrol && _petrolOctanes.isNotEmpty) {
+    newStation['petrol_data'] = {  // ← FIXED: use 'petrol_data'
+      'petrol': {  // ← FIXED: wrap in 'petrol' object
+        'available': true,
+        'octane_ratings': _petrolOctanes.map((o) => {
+          'name': o['name'],
+          'price': double.tryParse(o['price']) ?? 0,
+          'in_stock': o['inStock'],
+        }).toList(),
       }
+    };
+  }
+  
+  // Diesel data - send as part of petrol_data
+  if (_sellsDiesel && _dieselTypes.isNotEmpty) {
+    if (newStation['petrol_data'] == null) {
+      newStation['petrol_data'] = {};
+    }
+    newStation['petrol_data']['diesel'] = {  // ← FIXED: add diesel inside petrol_data
+      'available': true,
+      'diesel_types': _dieselTypes.map((d) => ({
+        'name': d['name'],
+        'price': double.tryParse(d['price']) ?? 0,
+        'in_stock': d['inStock'],
+      })).toList(),
+    };
+  }
+  
+  // Fallback simple price
+  if (_sellsPetrol && _petrolOctanes.isNotEmpty && _petrolOctanes[0]['price'].isNotEmpty) {
+    newStation['price'] = 'GH₵ ${_petrolOctanes[0]['price']}/L';
+  }
+  
+} else if (_selectedFuelType == 'LPG') {
+  newStation['lpg_type'] = _selectedLpgTypes.toList();
+  newStation['price'] = 'GH₵ ${_lpgPriceController.text.trim()}/kg';
+  newStation['delivery_available'] = _deliveryAvailable;
+  
+} else if (_selectedFuelType == 'EV') {
+  // EV data - send as 'ev_data'
+  newStation['ev_data'] = _chargingPoints.map((c) => {  // ← FIXED: use 'ev_data'
+    'connector': c['connector'],
+    'power_kw': int.tryParse(c['power']) ?? 0,
+    'price_per_kwh': double.tryParse(c['price']) ?? 0,
+    'available': c['available'],
+  }).toList();
+  newStation['has_backup_generator'] = _hasBackupGenerator;
+  
+  // Fallback price
+  if (_chargingPoints.isNotEmpty && _chargingPoints[0]['price'].isNotEmpty) {
+    newStation['price'] = 'GH₵ ${_chargingPoints[0]['price']}/kWh';
+  }
+}
+
+
+ 
 
       final token = AuthState.instance.token ?? '';
       await ApiService.addStation(
@@ -2174,7 +2244,136 @@ class _AddStationScreenState extends State<AddStationScreen> {
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
+  }*/
+
+// SUBMIT
+Future<void> _submit() async {
+  if (!_formKey.currentState!.validate()) return;
+
+  // Validate fuel type specific fields
+  if (_selectedFuelType == 'LPG' && _selectedLpgTypes.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Please select at least one LPG type'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+    return;
   }
+
+  if (_selectedFuelType == 'EV' && _chargingPoints.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Please add at least one charging point'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+    return;
+  }
+
+  setState(() => _isSubmitting = true);
+
+  try {
+    final photoUrls = await _uploadPhotos();
+
+    final Map<String, dynamic> newStation = {
+      'name': _nameController.text.trim(),
+      'type': _selectedFuelType,
+      'lat': double.tryParse(_latController.text.trim()) ?? 0.0,
+      'lng': double.tryParse(_lngController.text.trim()) ?? 0.0,
+      'status': 'Open',
+      'phone': _phoneController.text.trim(),
+      'whatsapp': _whatsappController.text.trim(),
+      'photos': photoUrls.isNotEmpty ? photoUrls : [],
+    };
+
+    // Add fuel type specific fields
+    if (_selectedFuelType == 'Petrol/Diesel') {
+      // PETROL data - goes to petrol_data field
+      if (_sellsPetrol && _petrolOctanes.isNotEmpty) {
+        newStation['petrol_data'] = {
+          'available': true,
+          'octane_ratings': _petrolOctanes.map((o) => {
+            'name': o['name'],
+            'price': double.tryParse(o['price']) ?? 0,
+            'in_stock': o['inStock'],
+          }).toList(),
+        };
+      }
+      
+      // DIESEL data - goes to diesel_data field (SEPARATE!)
+      if (_sellsDiesel && _dieselTypes.isNotEmpty) {
+        newStation['diesel_data'] = {
+          'available': true,
+          'diesel_types': _dieselTypes.map((d) => {
+            'name': d['name'],
+            'price': double.tryParse(d['price']) ?? 0,
+            'in_stock': d['inStock'],
+          }).toList(),
+        };
+      }
+      
+      // Fallback simple price
+      if (_sellsPetrol && _petrolOctanes.isNotEmpty && _petrolOctanes[0]['price'].isNotEmpty) {
+        newStation['price'] = 'GH₵ ${_petrolOctanes[0]['price']}/L';
+      }
+      
+    } else if (_selectedFuelType == 'LPG') {
+      newStation['lpg_type'] = _selectedLpgTypes.toList();
+      newStation['price'] = 'GH₵ ${_lpgPriceController.text.trim()}/kg';
+      newStation['delivery_available'] = _deliveryAvailable;
+      
+    } else if (_selectedFuelType == 'EV') {
+      // EV data - goes to ev_data field
+      newStation['ev_data'] = _chargingPoints.map((c) => {
+        'connector': c['connector'],
+        'power_kw': int.tryParse(c['power']) ?? 0,
+        'price_per_kwh': double.tryParse(c['price']) ?? 0,
+        'available': c['available'],
+      }).toList();
+      newStation['has_backup_generator'] = _hasBackupGenerator;
+      
+      // Fallback price
+      if (_chargingPoints.isNotEmpty && _chargingPoints[0]['price'].isNotEmpty) {
+        newStation['price'] = 'GH₵ ${_chargingPoints[0]['price']}/kWh';
+      }
+    }
+
+    print("=== SENDING DATA TO BACKEND ===");
+    //print(jsonEncode(newStation));
+
+    final token = AuthState.instance.token ?? '';
+    await ApiService.addStation(
+      token: token,
+      station: newStation,
+    );
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Station submitted! Pending approval from admin.'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+
+    Navigator.pop(context, newStation);
+  } catch (e) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(e.toString().replaceAll('Exception: ', '')),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Colors.red,
+      ),
+    );
+  } finally {
+    if (mounted) setState(() => _isSubmitting = false);
+  }
+}
+
+
+
 
   @override
   Widget build(BuildContext context) {
