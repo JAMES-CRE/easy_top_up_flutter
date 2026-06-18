@@ -48,6 +48,14 @@ class AuthState extends ChangeNotifier {
     await prefs.setString('user_photo_url', userPhotoUrl ?? '');
   }
 
+
+
+Future<void> refreshSession() async {
+  await _saveSession();  // Force save current state
+  notifyListeners();
+}
+
+
   // CLEAR SAVED SESSION ON LOGOUT
   Future<void> _clearSession() async {
     final prefs = await SharedPreferences.getInstance();

@@ -76,7 +76,7 @@ class _OperatorDashboardScreenState extends State<OperatorDashboardScreen> {
       if (octanes != null && octanes is List && octanes.isNotEmpty) {
         priceWidgets.add(const Padding(
           padding: EdgeInsets.only(top: 8, bottom: 4),
-          child: Text('⛽ PETROL', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.amber)),
+          child: Text('PETROL', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.amber)),
         ));
         for (var octane in octanes) {
           priceWidgets.add(Padding(
@@ -109,7 +109,7 @@ class _OperatorDashboardScreenState extends State<OperatorDashboardScreen> {
       if (diesels != null && diesels is List && diesels.isNotEmpty) {
         priceWidgets.add(const Padding(
           padding: EdgeInsets.only(top: 8, bottom: 4),
-          child: Text('🛢️ DIESEL', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.brown)),
+          child: Text('DIESEL', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.amber)),
         ));
         for (var diesel in diesels) {
           priceWidgets.add(Padding(
@@ -179,7 +179,7 @@ class _OperatorDashboardScreenState extends State<OperatorDashboardScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('⚡ ${point['connector'] ?? 'N/A'}', style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14)),
+                  Text('${point['connector'] ?? 'N/A'}', style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14)),
                   Text('${point['power_kw'] ?? 0} kW', style: const TextStyle(fontSize: 12, color: Colors.grey)),
                 ],
               ),
@@ -207,7 +207,7 @@ class _OperatorDashboardScreenState extends State<OperatorDashboardScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'CHARGING PRICES',
+          'CONNECTORS AT STATION',
           style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey, letterSpacing: 1.2),
         ),
         const SizedBox(height: 8),
@@ -220,11 +220,11 @@ class _OperatorDashboardScreenState extends State<OperatorDashboardScreen> {
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      const Text(
+      /*const Text(
         'PRICE',
         style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey, letterSpacing: 1.2),
-      ),
-      const SizedBox(height: 8),
+      ),*/
+      const SizedBox(height: 4),
       // Show LPG type as well
       if (station['lpg_type'] != null && (station['lpg_type'] as List).isNotEmpty)
         Wrap(
@@ -292,11 +292,6 @@ class _OperatorDashboardScreenState extends State<OperatorDashboardScreen> {
   @override
   Widget build(BuildContext context) {
 
-    print("=== STATION DATA DEBUG ===");
-print("Station: ${_station}");
-print("Petrol data: ${_station?['petrol_data']}");
-print("Diesel data: ${_station?['diesel_data']}");
-print("EV data: ${_station?['ev_data']}");
     final stationName = _station != null ? (_station!['name'] ?? 'Unknown') : 'Unknown';
     final stationType = _station != null ? (_station!['type'] ?? 'Unknown') : 'Unknown';
     final stationStatus = _station != null ? (_station!['status'] ?? 'Unknown') : 'Unknown';
@@ -426,10 +421,10 @@ print("EV data: ${_station?['ev_data']}");
                                     ? Colors.green
                                     : Colors.red),
                             
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 14),
                             
                             // FUEL PRICES SECTION (New - shows all individual prices)
-                            _buildFuelPricesSection(_station!),
+                           _buildFuelPricesSection(_station!),
                           ],
                         ),
                       ),

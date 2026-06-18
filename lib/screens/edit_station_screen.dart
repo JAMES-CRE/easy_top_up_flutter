@@ -795,110 +795,110 @@ class _EditStationScreenState extends State<EditStationScreen> {
     }
   }*/
 
-void _loadStationData() {
-  final station = widget.station;
-  _fuelType = station['type'] ?? 'Unknown';
+  void _loadStationData() {
+    final station = widget.station;
+    _fuelType = station['type'] ?? 'Unknown';
 
-  _nameController.text = station['name'] ?? '';
-  _phoneController.text = station['phone'] ?? '';
-  _whatsappController.text = station['whatsapp'] ?? '';
-  _latController.text = (station['lat'] ?? 0.0).toString();
-  _lngController.text = (station['lng'] ?? 0.0).toString();
+    _nameController.text = station['name'] ?? '';
+    _phoneController.text = station['phone'] ?? '';
+    _whatsappController.text = station['whatsapp'] ?? '';
+    _latController.text = (station['lat'] ?? 0.0).toString();
+    _lngController.text = (station['lng'] ?? 0.0).toString();
 
-  // Load PREMIUM PETROL data (from 'petrol' field - API format)
-  if (station['petrol'] != null) {
-    _sellsPetrol = true;
-    final octanes = station['petrol']['octane_ratings'];
-    if (octanes != null && octanes is List) {
-      _petrolOctanes = List<Map<String, dynamic>>.from(octanes.map((o) => ({
-        'name': o['name'] ?? '',
-        'price': o['price']?.toString() ?? '',
-        'inStock': o['in_stock'] ?? true,
-      })));
-    }
-  } else if (station['petrol_data'] != null) {
-    // Fallback for old data format
-    _sellsPetrol = station['petrol_data'].get('available', false);
-    final octanes = station['petrol_data'].get('octane_ratings');
-    if (octanes != null && octanes is List) {
-      _petrolOctanes = List<Map<String, dynamic>>.from(octanes.map((o) => ({
-        'name': o['name'] ?? '',
-        'price': o['price']?.toString() ?? '',
-        'inStock': o['in_stock'] ?? true,
-      })));
-    }
-  }
-
-  // Load PREMIUM DIESEL data (from 'diesel' field - API format)
-  if (station['diesel'] != null) {
-    _sellsDiesel = true;
-    final diesels = station['diesel']['diesel_types'];
-    if (diesels != null && diesels is List) {
-      _dieselTypes = List<Map<String, dynamic>>.from(diesels.map((d) => ({
-        'name': d['name'] ?? '',
-        'price': d['price']?.toString() ?? '',
-        'inStock': d['in_stock'] ?? true,
-      })));
-    }
-  } else if (station['diesel_data'] != null) {
-    // Fallback for old data format
-    _sellsDiesel = station['diesel_data'].get('available', false);
-    final diesels = station['diesel_data'].get('diesel_types');
-    if (diesels != null && diesels is List) {
-      _dieselTypes = List<Map<String, dynamic>>.from(diesels.map((d) => ({
-        'name': d['name'] ?? '',
-        'price': d['price']?.toString() ?? '',
-        'inStock': d['in_stock'] ?? true,
-      })));
-    }
-  }
-
-  // Load LPG data
-  if (_fuelType == 'LPG') {
-    final lpgTypes = station['lpg_type'];
-    if (lpgTypes != null && lpgTypes is List) {
-      _selectedLpgTypes = Set<String>.from(lpgTypes);
-    }
-    _deliveryAvailable = station['delivery_available'] == true;
-    
-    // Extract price number from string like "GH₵ 12.70/kg"
-    final priceStr = station['price'] ?? '';
-    final match = RegExp(r'[\d.]+').firstMatch(priceStr);
-    _lpgPriceController.text = match?.group(0) ?? '';
-  }
-
-  // Load PREMIUM EV data (from 'charging_points' field - API format)
-  if (_fuelType == 'EV') {
-    final chargingPoints = station['charging_points'];
-    if (chargingPoints != null && chargingPoints is List) {
-      _chargingPoints = List<Map<String, dynamic>>.from(chargingPoints.map((c) => ({
-        'connector': c['connector'] ?? 'CCS',
-        'power': c['power_kw']?.toString() ?? '150',
-        'price': c['price_per_kwh']?.toString() ?? '',
-        'available': c['available'] ?? true,
-      })));
-    } else if (station['ev_data'] != null) {
+    // Load PREMIUM PETROL data (from 'petrol' field - API format)
+    if (station['petrol'] != null) {
+      _sellsPetrol = true;
+      final octanes = station['petrol']['octane_ratings'];
+      if (octanes != null && octanes is List) {
+        _petrolOctanes = List<Map<String, dynamic>>.from(octanes.map((o) => ({
+              'name': o['name'] ?? '',
+              'price': o['price']?.toString() ?? '',
+              'inStock': o['in_stock'] ?? true,
+            })));
+      }
+    } else if (station['petrol_data'] != null) {
       // Fallback for old data format
-      final evData = station['ev_data'];
-      if (evData is List) {
-        _chargingPoints = List<Map<String, dynamic>>.from(evData.map((c) => ({
-          'connector': c['connector'] ?? 'CCS',
-          'power': c['power_kw']?.toString() ?? '150',
-          'price': c['price_per_kwh']?.toString() ?? '',
-          'available': c['available'] ?? true,
-        })));
+      _sellsPetrol = station['petrol_data'].get('available', false);
+      final octanes = station['petrol_data'].get('octane_ratings');
+      if (octanes != null && octanes is List) {
+        _petrolOctanes = List<Map<String, dynamic>>.from(octanes.map((o) => ({
+              'name': o['name'] ?? '',
+              'price': o['price']?.toString() ?? '',
+              'inStock': o['in_stock'] ?? true,
+            })));
       }
     }
-    _hasBackupGenerator = station['has_backup_generator'] == true;
-  }
 
-  // Load existing photos
-  final photos = station['photos'];
-  if (photos != null && photos is List) {
-    _existingPhotoUrls = List<String>.from(photos);
-  }
-}
+    // Load PREMIUM DIESEL data (from 'diesel' field - API format)
+    if (station['diesel'] != null) {
+      _sellsDiesel = true;
+      final diesels = station['diesel']['diesel_types'];
+      if (diesels != null && diesels is List) {
+        _dieselTypes = List<Map<String, dynamic>>.from(diesels.map((d) => ({
+              'name': d['name'] ?? '',
+              'price': d['price']?.toString() ?? '',
+              'inStock': d['in_stock'] ?? true,
+            })));
+      }
+    } else if (station['diesel_data'] != null) {
+      // Fallback for old data format
+      _sellsDiesel = station['diesel_data'].get('available', false);
+      final diesels = station['diesel_data'].get('diesel_types');
+      if (diesels != null && diesels is List) {
+        _dieselTypes = List<Map<String, dynamic>>.from(diesels.map((d) => ({
+              'name': d['name'] ?? '',
+              'price': d['price']?.toString() ?? '',
+              'inStock': d['in_stock'] ?? true,
+            })));
+      }
+    }
 
+    // Load LPG data
+    if (_fuelType == 'LPG') {
+      final lpgTypes = station['lpg_type'];
+      if (lpgTypes != null && lpgTypes is List) {
+        _selectedLpgTypes = Set<String>.from(lpgTypes);
+      }
+      _deliveryAvailable = station['delivery_available'] == true;
+
+      // Extract price number from string like "GH₵ 12.70/kg"
+      final priceStr = station['price'] ?? '';
+      final match = RegExp(r'[\d.]+').firstMatch(priceStr);
+      _lpgPriceController.text = match?.group(0) ?? '';
+    }
+
+    // Load PREMIUM EV data (from 'charging_points' field - API format)
+    if (_fuelType == 'EV') {
+      final chargingPoints = station['charging_points'];
+      if (chargingPoints != null && chargingPoints is List) {
+        _chargingPoints =
+            List<Map<String, dynamic>>.from(chargingPoints.map((c) => ({
+                  'connector': c['connector'] ?? 'CCS',
+                  'power': c['power_kw']?.toString() ?? '150',
+                  'price': c['price_per_kwh']?.toString() ?? '',
+                  'available': c['available'] ?? true,
+                })));
+      } else if (station['ev_data'] != null) {
+        // Fallback for old data format
+        final evData = station['ev_data'];
+        if (evData is List) {
+          _chargingPoints = List<Map<String, dynamic>>.from(evData.map((c) => ({
+                'connector': c['connector'] ?? 'CCS',
+                'power': c['power_kw']?.toString() ?? '150',
+                'price': c['price_per_kwh']?.toString() ?? '',
+                'available': c['available'] ?? true,
+              })));
+        }
+      }
+      _hasBackupGenerator = station['has_backup_generator'] == true;
+    }
+
+    // Load existing photos
+    final photos = station['photos'];
+    if (photos != null && photos is List) {
+      _existingPhotoUrls = List<String>.from(photos);
+    }
+  }
 
   // Helper to extract number from price string
   String _extractPriceNumber(String priceString) {
@@ -1055,7 +1055,7 @@ void _loadStationData() {
   }
 
   // SAVE CHANGES
- /* Future<void> _saveChanges() async {
+  /* Future<void> _saveChanges() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isSaving = true);
@@ -1157,98 +1157,96 @@ void _loadStationData() {
     }
   }*/
 
-Future<void> _saveChanges() async {
-  if (!_formKey.currentState!.validate()) return;
+  Future<void> _saveChanges() async {
+    if (!_formKey.currentState!.validate()) return;
 
-  setState(() => _isSaving = true);
+    setState(() => _isSaving = true);
 
-  try {
-    final newPhotoUrls = await _uploadNewPhotos();
-    final allPhotoUrls = [..._existingPhotoUrls, ...newPhotoUrls];
+    try {
+      final newPhotoUrls = await _uploadNewPhotos();
+      final allPhotoUrls = [..._existingPhotoUrls, ...newPhotoUrls];
 
-    final Map<String, dynamic> updatedData = {
-      'name': _nameController.text.trim(),
-      'type': _fuelType,
-      'phone': _phoneController.text.trim(),
-      'whatsapp': _whatsappController.text.trim(),
-      'lat': double.tryParse(_latController.text.trim()) ?? 0.0,
-      'lng': double.tryParse(_lngController.text.trim()) ?? 0.0,
-      'photos': allPhotoUrls,
-    };
+      final Map<String, dynamic> updatedData = {
+        'name': _nameController.text.trim(),
+        'type': _fuelType,
+        'phone': _phoneController.text.trim(),
+        'whatsapp': _whatsappController.text.trim(),
+        'lat': double.tryParse(_latController.text.trim()) ?? 0.0,
+        'lng': double.tryParse(_lngController.text.trim()) ?? 0.0,
+        'photos': allPhotoUrls,
+      };
 
-    // Add fuel type specific fields using API format
-    if (_fuelType == 'Petrol/Diesel') {
-      // PETROL data - send as 'petrol' (API expects this)
-      if (_sellsPetrol && _petrolOctanes.isNotEmpty) {
-        updatedData['petrol'] = {
-          'available': true,
-          'octane_ratings': _petrolOctanes.map((o) => ({
-            'name': o['name'],
-            'price': double.tryParse(o['price']) ?? 0,
-            'in_stock': o['inStock'],
-          })).toList(),
-        };
+      // Add fuel type specific fields using API format
+      if (_fuelType == 'Petrol/Diesel') {
+        // PETROL data - send as 'petrol' (API expects this)
+        if (_sellsPetrol && _petrolOctanes.isNotEmpty) {
+          updatedData['petrol'] = {
+            'available': true,
+            'octane_ratings': _petrolOctanes
+                .map((o) => ({
+                      'name': o['name'],
+                      'price': double.tryParse(o['price']) ?? 0,
+                      'in_stock': o['inStock'],
+                    }))
+                .toList(),
+          };
+        }
+
+        // DIESEL data - send as 'diesel' (API expects this)
+        if (_sellsDiesel && _dieselTypes.isNotEmpty) {
+          updatedData['diesel'] = {
+            'available': true,
+            'diesel_types': _dieselTypes
+                .map((d) => ({
+                      'name': d['name'],
+                      'price': double.tryParse(d['price']) ?? 0,
+                      'in_stock': d['inStock'],
+                    }))
+                .toList(),
+          };
+        }
+      } else if (_fuelType == 'LPG') {
+        updatedData['lpg_type'] = _selectedLpgTypes.toList();
+        updatedData['price'] = 'GH₵ ${_lpgPriceController.text.trim()}/kg';
+        updatedData['delivery_available'] = _deliveryAvailable;
+      } else if (_fuelType == 'EV') {
+        // EV data - send as 'charging_points' (API expects this)
+        updatedData['charging_points'] = _chargingPoints
+            .map((c) => ({
+                  'connector': c['connector'],
+                  'power_kw': int.tryParse(c['power']) ?? 0,
+                  'price_per_kwh': double.tryParse(c['price']) ?? 0,
+                  'available': c['available'],
+                }))
+            .toList();
+        updatedData['has_backup_generator'] = _hasBackupGenerator;
       }
-      
-      // DIESEL data - send as 'diesel' (API expects this)
-      if (_sellsDiesel && _dieselTypes.isNotEmpty) {
-        updatedData['diesel'] = {
-          'available': true,
-          'diesel_types': _dieselTypes.map((d) => ({
-            'name': d['name'],
-            'price': double.tryParse(d['price']) ?? 0,
-            'in_stock': d['inStock'],
-          })).toList(),
-        };
-      }
-      
-    } else if (_fuelType == 'LPG') {
-      updatedData['lpg_type'] = _selectedLpgTypes.toList();
-      updatedData['price'] = 'GH₵ ${_lpgPriceController.text.trim()}/kg';
-      updatedData['delivery_available'] = _deliveryAvailable;
-      
-    } else if (_fuelType == 'EV') {
-      // EV data - send as 'charging_points' (API expects this)
-      updatedData['charging_points'] = _chargingPoints.map((c) => ({
-        'connector': c['connector'],
-        'power_kw': int.tryParse(c['power']) ?? 0,
-        'price_per_kwh': double.tryParse(c['price']) ?? 0,
-        'available': c['available'],
-      })).toList();
-      updatedData['has_backup_generator'] = _hasBackupGenerator;
+
+      print("=== SAVING EDIT DATA ===");
+      print(updatedData);
+
+      final token = AuthState.instance.token ?? '';
+      await ApiService.updateStation(
+        token: token,
+        stationId: widget.station['id'],
+        updatedData: updatedData,
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Station updated successfully!')),
+      );
+      Navigator.pop(context, updatedData);
+    } catch (e) {
+      print('Update error: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
+      );
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
     }
-
-    print("=== SAVING EDIT DATA ===");
-    print(updatedData);
-
-    final token = AuthState.instance.token ?? '';
-    await ApiService.updateStation(
-      token: token,
-      stationId: widget.station['id'],
-      updatedData: updatedData,
-    );
-
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Station updated successfully!')),
-    );
-    Navigator.pop(context, updatedData);
-  } catch (e) {
-    print('Update error: $e');
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
-    );
-  } finally {
-    if (mounted) setState(() => _isSaving = false);
-
-   
   }
-  
-}
-
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -1599,8 +1597,9 @@ Future<void> _saveChanges() async {
                 const SizedBox(height: 20),
               ],
 
-              // ========== EV PREMIUM SECTION ==========
-              /*if (_fuelType == 'EV') ...[
+              // EV SECTION
+              if (_fuelType == 'EV') ...[
+                const SizedBox(height: 20),
                 _sectionLabel('Charging Points'),
                 const SizedBox(height: 8),
                 ..._chargingPoints.asMap().entries.map((entry) {
@@ -1654,142 +1653,7 @@ Future<void> _saveChanges() async {
                           ],
                         ),
                         const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextFormField(
-                                initialValue: point['power'],
-                                decoration: const InputDecoration(
-                                  labelText: 'Power Output',
-                                  hintText: 'e.g. 50, 150, 350',
-                                  suffixText: 'kW',
-                                  border: OutlineInputBorder(),
-                                ),
-                                keyboardType: TextInputType.number,
-                                onChanged: (val) {
-                                  setState(() {
-                                    _chargingPoints[index]['power'] = val;
-                                  });
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: TextFormField(
-                                initialValue: point['price'],
-                                decoration: const InputDecoration(
-                                  labelText: 'Price',
-                                  hintText: 'e.g. 5.50',
-                                  suffixText: 'GH₵/kWh',
-                                  border: OutlineInputBorder(),
-                                ),
-                                keyboardType: TextInputType.number,
-                                onChanged: (val) {
-                                  setState(() {
-                                    _chargingPoints[index]['price'] = val;
-                                  });
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Row(
-                              children: [
-                                Checkbox(
-                                  value: point['available'],
-                                  onChanged: (val) {
-                                    setState(() {
-                                      _chargingPoints[index]['available'] =
-                                          val ?? true;
-                                    });
-                                  },
-                                  activeColor: _brandGreen,
-                                ),
-                                const Text('Available'),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  );
-                }),
-                TextButton.icon(
-                  onPressed: _addChargingPoint,
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text('Add Charging Point'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: _brandGreen,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Checkbox(
-                      value: _hasBackupGenerator,
-                      onChanged: (val) =>
-                          setState(() => _hasBackupGenerator = val ?? false),
-                      activeColor: _brandGreen,
-                    ),
-                    const Text('Has Backup Generator',
-                        style: TextStyle(
-                            fontSize: 14, fontWeight: FontWeight.w500)),
-                  ],
-                ),
-                const SizedBox(height: 20),
-              ],*/
-
-// EV SECTION (Premium - Multiple charging points)
-if (_fuelType == 'EV') ...[
-  const SizedBox(height: 20),
-  _sectionLabel('Charging Points'),
-  const SizedBox(height: 8),
-  
-  ..._chargingPoints.asMap().entries.map((entry) {
-    int index = entry.key;
-    var point = entry.value;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  value: point['connector'],
-                  decoration: const InputDecoration(
-                    labelText: 'Connector Type',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: const [
-                    DropdownMenuItem(value: 'CCS', child: Text('CCS')),
-                    DropdownMenuItem(value: 'Type 2', child: Text('Type 2')),
-                    DropdownMenuItem(value: 'CHAdeMO', child: Text('CHAdeMO')),
-                    DropdownMenuItem(value: 'Tesla', child: Text('Tesla')),
-                    DropdownMenuItem(value: 'Type 1', child: Text('Type 1')),
-                    DropdownMenuItem(value: 'GB/T', child: Text('GB/T')),
-                  ],
-                  onChanged: (val) {
-                    setState(() {
-                      _chargingPoints[index]['connector'] = val;
-                    });
-                  },
-                ),
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                icon: const Icon(Icons.delete, color: Colors.red),
-                onPressed: () => _removeChargingPoint(index),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
+                        /*Row(
             children: [
               Expanded(
                 child: TextFormField(
@@ -1812,7 +1676,7 @@ if (_fuelType == 'EV') ...[
               Expanded(
                 child: TextFormField(
                   initialValue: point['price'],
-                  style: const TextStyle(fontSize: 12),
+                  //style: const TextStyle(fontSize: 10),
                   decoration: const InputDecoration(
                     labelText: 'Price',
                     hintText: 'e.g. 5.50',
@@ -1846,38 +1710,114 @@ if (_fuelType == 'EV') ...[
                 ],
               ),
             ],
-          ),
-        ],
-      ),
-    );
-  }),
-  
-  TextButton.icon(
-    onPressed: _addChargingPoint,
-    icon: const Icon(Icons.add, size: 18),
-    label: const Text('Add Charging Point'),
-    style: TextButton.styleFrom(
-      foregroundColor: _brandGreen,
-    ),
-  ),
-  
-  const SizedBox(height: 16),
-  Row(
-    children: [
-      Checkbox(
-        value: _hasBackupGenerator,
-        onChanged: (val) =>
-            setState(() => _hasBackupGenerator = val ?? false),
-        activeColor: _brandGreen,
-      ),
-      const Text(
-        'Has Backup Generator',
-        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-      ),
-    ],
-  ),
-],
+          ),*/
 
+                        Row(
+                          children: [
+                            // Power Output - narrower
+                            Expanded(
+                              flex: 1,
+                              child: TextFormField(
+                                initialValue: point['power']?.toString() ?? '',
+                                decoration: const InputDecoration(
+                                  labelText: 'Power',
+                                  hintText: 'kW',
+                                  border: OutlineInputBorder(),
+                                  contentPadding: EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 12),
+                                ),
+                                keyboardType: TextInputType.number,
+                                onChanged: (val) {
+                                  setState(() {
+                                    _chargingPoints[index]['power'] = val ?? '';
+                                  });
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            // Price - wider
+                            Expanded(
+                              flex: 1,
+                              child: TextFormField(
+                                initialValue: point['price']?.toString() ?? '',
+                                style: const TextStyle(fontSize: 12),
+                                decoration: const InputDecoration(
+                                  labelText: 'Price',
+                                  hintText: '0.00',
+                                  suffixText: 'GH₵/kWh',
+                                  border: OutlineInputBorder(),
+                                  contentPadding: EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 10),
+                                  labelStyle: TextStyle(fontSize: 10),
+                                ),
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                        decimal: true),
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.allow(
+                                      RegExp(r'^\d*\.?\d{0,2}$')),
+                                ],
+                                onChanged: (val) {
+                                  setState(() {
+                                    _chargingPoints[index]['price'] = val ?? '';
+                                  });
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            // Availability
+                            SizedBox(
+                              width: 75,
+                              child: Row(
+                                children: [
+                                  Checkbox(
+                                    value: point['available'] ?? true,
+                                    onChanged: (val) {
+                                      setState(() {
+                                        _chargingPoints[index]['available'] =
+                                            val ?? true;
+                                      });
+                                    },
+                                    activeColor: _brandGreen,
+                                  ),
+                                  const Flexible(
+                                    child: Text('Avail',
+                                        style: TextStyle(fontSize: 11)),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+                TextButton.icon(
+                  onPressed: _addChargingPoint,
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('Add Charging Point'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: _brandGreen,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Checkbox(
+                      value: _hasBackupGenerator,
+                      onChanged: (val) =>
+                          setState(() => _hasBackupGenerator = val ?? false),
+                      activeColor: _brandGreen,
+                    ),
+                    const Text(
+                      'Has Backup Generator',
+                      style:
+                          TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                    ),
+                  ],
+                ),
+              ],
 
               // PHOTO SECTION
               _sectionLabel(totalPhotos == 0
@@ -2131,5 +2071,3 @@ if (_fuelType == 'EV') ...[
     super.dispose();
   }
 }
-
-

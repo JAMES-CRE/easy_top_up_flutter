@@ -3,14 +3,17 @@ import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'screens/main_map_screen.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'screens/auth_state.dart';  // ← ADD THIS IMPORT
+import 'screens/auth_state.dart'; 
+import 'services/favorite_service.dart';
 
 void main() async {  //  CHANGE TO ASYNC
   WidgetsFlutterBinding.ensureInitialized();  // 
   
   // Load saved session before running the app
   await AuthState.instance.loadSavedSession();  // 
-  
+
+  await FavoriteService().init();
+
   runApp(const EasyTopUpApp());
 }
 

@@ -14,6 +14,7 @@ import 'dart:math';
 import 'review_section.dart';
 import 'api_service.dart';
 import 'stations_list_screen.dart';
+import '../services/favorite_service.dart';
 
 class MainMapScreen extends StatefulWidget {
   const MainMapScreen({super.key});
@@ -174,11 +175,21 @@ class _MainMapScreenState extends State<MainMapScreen> {
           hue = BitmapDescriptor.hueRed;
       }
 
+      // Check if station is favorited
+      final isFav = FavoriteService().isFavorite(station['id'].toString());
+
       return Marker(
         markerId: MarkerId(station['id']),
         position: LatLng(station['lat'], station['lng']),
         icon: BitmapDescriptor.defaultMarkerWithHue(hue),
         onTap: () => _showBottomSheet(station),
+        // Optional: Add a label with heart symbol
+        // Note: Google Maps markers don't support custom labels easily,
+        // but we can add a snippet or info window
+        infoWindow: InfoWindow(
+          title: station['name'],
+          snippet: isFav ? '❤️ Favorite' : 'Tap for details',
+        ),
       );
     }).toSet();
   }
@@ -758,7 +769,7 @@ class _MainMapScreenState extends State<MainMapScreen> {
                       ),
 
                       // Station name and type
-                      Row(
+                      /*Row(
                         children: [
                           Expanded(
                             child: Text(
@@ -769,7 +780,47 @@ class _MainMapScreenState extends State<MainMapScreen> {
                           ),
                           _typeBadge(station['type']),
                         ],
+                      ),*/
+
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              station['name'],
+                              style: const TextStyle(
+                                  fontSize: 22, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          
+                          // Heart icon for favorites (only for logged-in users)
+                          if (AuthState.instance.isLoggedIn)
+                            GestureDetector(
+                              onTap: () async {
+                                final stationId = station['id'].toString();
+                                await FavoriteService()
+                                    .toggleFavorite(stationId);
+                                setState(() {}); // Refresh the bottom sheet
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.only(right: 8),
+                                child: Icon(
+                                  FavoriteService()
+                                          .isFavorite(station['id'].toString())
+                                      ? Icons.favorite
+                                      : Icons.favorite_border,
+                                  color: FavoriteService()
+                                          .isFavorite(station['id'].toString())
+                                      ? Colors.red
+                                      : Colors.grey,
+                                  size: 28,
+                                ),
+                              ),
+                            ),
+
+                          _typeBadge(station['type']),
+                        ],
                       ),
+
                       const SizedBox(height: 8),
 
                       // DISTANCE ROW
@@ -1287,7 +1338,7 @@ class _MainMapScreenState extends State<MainMapScreen> {
           ),
           child: Table(
             columnWidths: const {
-              0: FlexColumnWidth(2),
+              0: FlexColumnWidth(1),
               1: FlexColumnWidth(1.5),
               2: FlexColumnWidth(1.5),
             },
@@ -1379,15 +1430,15 @@ class _MainMapScreenState extends State<MainMapScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
+       /* Text(
           ' LPG',
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
             color: Colors.blue.shade700,
           ),
-        ),
-        const SizedBox(height: 8),
+        ),*/
+        //const SizedBox(height: 8),
 
         // Price Card only (no delivery info)
         Container(
@@ -1417,7 +1468,7 @@ class _MainMapScreenState extends State<MainMapScreen> {
     );
   }
 
-  // ========== PREMIUM EV SECTION ==========
+  
   // ========== PREMIUM EV SECTION (Overflow Fixed) ==========
   Widget _buildEvSection(Map<String, dynamic> station) {
     final chargingPoints = station['charging_points'] as List?;
@@ -1699,11 +1750,14 @@ class _MainMapScreenState extends State<MainMapScreen> {
               IconButton(
                 icon: const Icon(Icons.person_outline),
                 tooltip: 'Profile',
-                onPressed: () {
-                  Navigator.push(
+                onPressed: () async {
+                  final selectedStation = await Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => const ProfileScreen()),
                   );
+                  if (selectedStation != null && mounted) {
+                    _showBottomSheet(selectedStation);
+                  }
                 },
               ),
             ],
