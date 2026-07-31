@@ -31,31 +31,38 @@ class _ReviewsSectionState extends State<ReviewsSection> {
     _loadReviews();
   }
 
-  // LOAD REVIEWS FROM API
-  Future<void> _loadReviews() async {
+  
+
+  // LOAD REVIEWS FROM API 
+Future<void> _loadReviews() async {
+  setState(() {
+    _isLoading = true;
+    _errorMessage = null;
+  });
+
+  try {
+    // ─── Only pass token if user is logged in 
+    final token = AuthState.instance.isLoggedIn 
+        ? AuthState.instance.token 
+        : null;
+
+    final reviews = await ApiService.getStationReviews(
+      token: token,
+      stationId: widget.stationId,
+    );
+
     setState(() {
-      _isLoading = true;
-      _errorMessage = null;
+      _reviews = reviews;
+      _isLoading = false;
     });
-
-    try {
-      final token = AuthState.instance.token ?? '';
-      final reviews = await ApiService.getStationReviews(
-        token: token,
-        stationId: widget.stationId,
-      );
-
-      setState(() {
-        _reviews = reviews;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _errorMessage = e.toString().replaceAll('Exception: ', '');
-        _isLoading = false;
-      });
-    }
+  } catch (e) {
+    setState(() {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _isLoading = false;
+    });
   }
+}
+
 
   // GET AVERAGE RATING
   double get _averageRating {
@@ -437,7 +444,7 @@ class _ReviewsSectionState extends State<ReviewsSection> {
           }),
 
             // SHOW MORE
-        if (!_isLoading && _errorMessage == null && _reviews.length > 3)
+        if (!_isLoading && _errorMessage == null && _reviews.length >3)
           Center(
             child: TextButton(
               onPressed: () {

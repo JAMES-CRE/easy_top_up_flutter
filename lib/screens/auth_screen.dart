@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'auth_state.dart';
 import 'api_service.dart';
+import 'main_map_screen.dart';
+import 'operator_home_screen.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -10,7 +12,8 @@ class AuthScreen extends StatefulWidget {
   State<AuthScreen> createState() => _AuthScreenState();
 }
 
-class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateMixin {
+class _AuthScreenState extends State<AuthScreen>
+    with SingleTickerProviderStateMixin {
   static const Color _brandGreen = Color(0xFF2E7D32);
   static const Color _lightGreen = Color(0xFFE8F5E9);
   static const Color _darkGreen = Color(0xFF1B5E20);
@@ -40,7 +43,8 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
     _fadeAnimation = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
     );
-    _slideAnimation = Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero).animate(
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
     );
     _animationController.forward();
@@ -70,7 +74,6 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
         child: SafeArea(
           child: Stack(
             children: [
-              // Background decorative circles
               Positioned(
                 top: -50,
                 right: -50,
@@ -79,6 +82,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                   height: 200,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
+                    // ignore: deprecated_member_use
                     color: _brandGreen.withOpacity(0.05),
                   ),
                 ),
@@ -91,11 +95,12 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                   height: 150,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
+                    // ignore: deprecated_member_use
                     color: _brandGreen.withOpacity(0.03),
                   ),
                 ),
               ),
-              
+
               SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Form(
@@ -103,8 +108,6 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                   child: Column(
                     children: [
                       const SizedBox(height: 20),
-                      
-                      // Back button area
                       Align(
                         alignment: Alignment.centerLeft,
                         child: IconButton(
@@ -115,6 +118,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                               shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
+                                  // ignore: deprecated_member_use
                                   color: Colors.black.withOpacity(0.05),
                                   blurRadius: 10,
                                   offset: const Offset(0, 2),
@@ -126,7 +130,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                           onPressed: () => Navigator.pop(context),
                         ),
                       ),
-                      
+
                       FadeTransition(
                         opacity: _fadeAnimation,
                         child: SlideTransition(
@@ -146,6 +150,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                                   shape: BoxShape.circle,
                                   boxShadow: [
                                     BoxShadow(
+                                      // ignore: deprecated_member_use
                                       color: _brandGreen.withOpacity(0.3),
                                       blurRadius: 20,
                                       offset: const Offset(0, 8),
@@ -159,7 +164,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                                 ),
                               ),
                               const SizedBox(height: 20),
-                              
+
                               // App Name
                               Text(
                                 'Easy Top Up',
@@ -172,19 +177,21 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                                 ),
                               ),
                               const SizedBox(height: 8),
-                              
+
                               // Subtitle
                               Text(
-                                _isLogin ? 'Welcome back' : 'Create your account',
+                                _isLogin
+                                    ? 'Welcome back'
+                                    : 'Create your account',
                                 style: TextStyle(
                                   fontSize: 15,
                                   color: Colors.grey[600],
                                   letterSpacing: 0.5,
                                 ),
                               ),
-                              
+
                               const SizedBox(height: 40),
-                              
+
                               // Error Message
                               if (_errorMessage != null)
                                 Container(
@@ -193,22 +200,25 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                                   decoration: BoxDecoration(
                                     color: Colors.red.shade50,
                                     borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: Colors.red.shade200),
+                                    border:
+                                        Border.all(color: Colors.red.shade200),
                                   ),
                                   child: Row(
                                     children: [
-                                      const Icon(Icons.error_outline, color: Colors.red, size: 20),
+                                      const Icon(Icons.error_outline,
+                                          color: Colors.red, size: 20),
                                       const SizedBox(width: 10),
                                       Expanded(
                                         child: Text(
                                           _errorMessage!,
-                                          style: const TextStyle(color: Colors.red, fontSize: 13),
+                                          style: const TextStyle(
+                                              color: Colors.red, fontSize: 13),
                                         ),
                                       ),
                                     ],
                                   ),
                                 ),
-                              
+
                               // Sign up fields container
                               if (!_isLogin)
                                 Container(
@@ -218,6 +228,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                                     borderRadius: BorderRadius.circular(20),
                                     boxShadow: [
                                       BoxShadow(
+                                        // ignore: deprecated_member_use
                                         color: Colors.black.withOpacity(0.05),
                                         blurRadius: 15,
                                         offset: const Offset(0, 4),
@@ -232,43 +243,58 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                                         child: Row(
                                           children: [
                                             Expanded(
-                                              child: _buildRoleChip('user', 'Fuel User', Icons.person_outline),
+                                              child: _buildRoleChip(
+                                                  'user',
+                                                  'Fuel User',
+                                                  Icons.person_outline),
                                             ),
                                             const SizedBox(width: 12),
                                             Expanded(
-                                              child: _buildRoleChip('operator', 'Station Operator', Icons.store),
+                                              child: _buildRoleChip(
+                                                  'operator',
+                                                  'Station Operator',
+                                                  Icons.store),
                                             ),
                                           ],
                                         ),
                                       ),
-                                      
+
                                       // Name field
                                       Padding(
-                                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                                        padding: const EdgeInsets.fromLTRB(
+                                            16, 0, 16, 16),
                                         child: _buildTextField(
                                           controller: _nameController,
                                           hint: 'Full Name',
                                           icon: Icons.person_outline,
-                                          validator: (v) => v == null || v.trim().isEmpty ? 'Enter your name' : null,
+                                          validator: (v) =>
+                                              v == null || v.trim().isEmpty
+                                                  ? 'Enter your name'
+                                                  : null,
                                         ),
                                       ),
-                                      
+
                                       // Business name for operators
                                       if (_selectedRole == 'operator')
                                         Padding(
-                                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                                          padding: const EdgeInsets.fromLTRB(
+                                              16, 0, 16, 16),
                                           child: _buildTextField(
                                             controller: _businessNameController,
                                             hint: 'Station / Business Name',
                                             icon: Icons.store,
-                                            validator: (v) => _selectedRole == 'operator' && (v == null || v.trim().isEmpty) 
-                                                ? 'Enter business name' : null,
+                                            validator: (v) =>
+                                                _selectedRole == 'operator' &&
+                                                        (v == null ||
+                                                            v.trim().isEmpty)
+                                                    ? 'Enter business name'
+                                                    : null,
                                           ),
                                         ),
                                     ],
                                   ),
                                 ),
-                              
+
                               // Email Field
                               _buildTextField(
                                 controller: _emailController,
@@ -276,16 +302,20 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                                 icon: Icons.email_outlined,
                                 keyboardType: TextInputType.emailAddress,
                                 validator: (value) {
-                                  if (value == null || value.trim().isEmpty) return 'Enter your email';
-                                  if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                                  if (value == null || value.trim().isEmpty) {
+                                    return 'Enter your email';
+                                  }
+                                  if (!RegExp(
+                                          r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                                      .hasMatch(value)) {
                                     return 'Enter a valid email';
                                   }
                                   return null;
                                 },
                               ),
-                              
+
                               const SizedBox(height: 16),
-                              
+
                               // Password Field
                               _buildTextField(
                                 controller: _passwordController,
@@ -293,18 +323,27 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                                 icon: Icons.lock_outline,
                                 obscureText: _obscurePassword,
                                 suffixIcon: IconButton(
-                                  icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility, size: 20),
-                                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                                  icon: Icon(
+                                      _obscurePassword
+                                          ? Icons.visibility_off
+                                          : Icons.visibility,
+                                      size: 20),
+                                  onPressed: () => setState(() =>
+                                      _obscurePassword = !_obscurePassword),
                                 ),
                                 validator: (value) {
-                                  if (value == null || value.trim().isEmpty) return 'Enter your password';
-                                  if (value.length < 6) return 'Password must be at least 6 characters';
+                                  if (value == null || value.trim().isEmpty) {
+                                    return 'Enter your password';
+                                  }
+                                  if (value.length < 6) {
+                                    return 'Password must be at least 6 characters';
+                                  }
                                   return null;
                                 },
                               ),
-                              
+
                               const SizedBox(height: 28),
-                              
+
                               // Submit Button
                               SizedBox(
                                 width: double.infinity,
@@ -338,16 +377,19 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                                         ),
                                 ),
                               ),
-                              
+
                               const SizedBox(height: 20),
-                              
+
                               // Toggle Login/Signup
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Text(
-                                    _isLogin ? "Don't have an account?" : "Already have an account?",
-                                    style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                                    _isLogin
+                                        ? "Don't have an account?"
+                                        : "Already have an account?",
+                                    style: TextStyle(
+                                        color: Colors.grey[600], fontSize: 14),
                                   ),
                                   TextButton(
                                     onPressed: () {
@@ -373,7 +415,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                                   ),
                                 ],
                               ),
-                              
+
                               const SizedBox(height: 30),
                             ],
                           ),
@@ -410,7 +452,9 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
         ),
         child: Column(
           children: [
-            Icon(icon, color: isSelected ? Colors.white : Colors.grey.shade600, size: 24),
+            Icon(icon,
+                color: isSelected ? Colors.white : Colors.grey.shade600,
+                size: 24),
             const SizedBox(height: 8),
             Text(
               label,
@@ -449,7 +493,8 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
           suffixIcon: suffixIcon,
           filled: true,
           fillColor: Colors.white,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(30),
             borderSide: BorderSide.none,
@@ -476,11 +521,10 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
     );
   }
 
-  // AUTH HANDLER 
+  // AUTH HANDLER
   Future<void> _handleAuth() async {
-    // Validate form first
+    
     if (!_formKey.currentState!.validate()) {
-      print("Form validation failed");
       return;
     }
 
@@ -491,15 +535,12 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
 
     try {
       if (_isLogin) {
-        // LOGIN
-        print("Attempting login with: ${_emailController.text.trim()}");
-        
+
         final data = await ApiService.login(
           email: _emailController.text.trim(),
           password: _passwordController.text.trim(),
         );
 
-        print("Login response: $data");
 
         AuthState.instance.login(
           name: data['name'],
@@ -517,21 +558,41 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
               backgroundColor: _brandGreen,
             ),
           );
-          Navigator.pop(context);
+        
+          if (!mounted) return;
+          
+          if (!mounted) return;
+
+          final role = data['role'] ?? 'user';
+
+          if (role == 'operator') {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(
+                builder: (_) => const OperatorHomeScreen(),
+              ),
+              (route) => false,
+            );
+          } else {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(
+                builder: (_) => const MainMapScreen(),
+              ),
+              (route) => false,
+            );
+          }
         }
       } else {
-        // REGISTER
-        print("Attempting registration...");
-        
+
         final data = await ApiService.register(
           name: _nameController.text.trim(),
           email: _emailController.text.trim(),
           password: _passwordController.text.trim(),
           role: _selectedRole,
-          businessName: _selectedRole == 'operator' ? _businessNameController.text.trim() : null,
+          businessName: _selectedRole == 'operator'
+              ? _businessNameController.text.trim()
+              : null,
         );
 
-        print("Register response: $data");
 
         AuthState.instance.login(
           name: data['name'],
@@ -544,8 +605,8 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(_selectedRole == 'operator' 
-                  ? 'Operator account created! Please wait for admin approval.' 
+              content: Text(_selectedRole == 'operator'
+                  ? 'Operator account created! Please wait for admin approval.'
                   : 'Account created successfully!'),
               behavior: SnackBarBehavior.floating,
               backgroundColor: _brandGreen,
@@ -555,7 +616,6 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
         }
       }
     } catch (e) {
-      print("Auth error: $e");
       setState(() {
         _errorMessage = e.toString().replaceAll('Exception: ', '');
       });

@@ -569,7 +569,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
 
     setState(() {
-      _isLoading = true;  // ← FIXED: Set loading to true
+      _isLoading = true;  
       _errorMessage = null;
     });
 
@@ -595,7 +595,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         fullName = '${updatedUser['first_name']} ${updatedUser['last_name']}'.trim();
       }
 
-      // CRITICAL: Update AuthState with new values 
       AuthState.instance.updateProfile(
         name: fullName,
         email: updatedUser['email'] ?? _emailController.text.trim(),
@@ -603,7 +602,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       );
 
       
-      await AuthState.instance.refreshSession();  // Add this method to AuthState
+      await AuthState.instance.refreshSession();  
 
       print('AuthState updated - Name: ${AuthState.instance.userName}');
       print('AuthState updated - Email: ${AuthState.instance.userEmail}');
@@ -634,7 +633,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     } finally {
       if (mounted) {
         setState(() {
-          _isLoading = false;  // ← FIXED: Reset loading state
+          _isLoading = false;  
         });
       }
     }
@@ -692,7 +691,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 ),
               ),
 
-            // ── PROFILE PHOTO ──
+            // PROFILE PHOTO 
             Center(
               child: Stack(
                 children: [
@@ -759,7 +758,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
             const SizedBox(height: 32),
 
-            // ── FULL NAME ──
+            //  FULL NAME 
             _sectionLabel('Full Name'),
             const SizedBox(height: 8),
             _textField(
@@ -782,7 +781,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
             const SizedBox(height: 40),
 
-            // ── SAVE BUTTON ──
+            //  SAVE BUTTON 
             SizedBox(
               width: double.infinity,
               height: 52,

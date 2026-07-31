@@ -1,6 +1,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'api_service.dart';
+
 
 
 class AuthState extends ChangeNotifier {
@@ -9,13 +11,14 @@ class AuthState extends ChangeNotifier {
 
   bool isLoggedIn = false;
   String? userName;
-  String? userEmail;
+  String? userEmail;   
   String? userPhotoUrl;
   String userRole = 'user';
   String? token;
 
   bool get isOperator => userRole == 'operator';
   bool get isAdmin => userRole == 'admin';
+  Map<String, dynamic>? fuelPrices;
 
   // LOAD SAVED SESSION ON APP START 
   Future<void> loadSavedSession() async {
@@ -38,6 +41,38 @@ class AuthState extends ChangeNotifier {
     }
   }
 
+
+
+  // LOAD FUEL PRICES
+  Future<void> loadFuelPrices() async {
+    try {
+      final prices = await ApiService.getFuelPrices();
+      if (prices['success'] == true) {
+        fuelPrices = prices['data'];
+        notifyListeners();
+      }
+    } catch (e) {
+      print('Error loading fuel prices: $e');
+    }
+  }
+
+  // GET SPECIFIC FUEL PRICE
+  double? getFuelPrice(String fuelType) {
+    if (fuelPrices == null) return null;
+    return fuelPrices![fuelType] is num 
+        ? (fuelPrices![fuelType] as num).toDouble() 
+        : null;
+  }
+
+  // GET PRICE WITH CURRENCY
+  String getFormattedFuelPrice(String fuelType) {
+    final price = getFuelPrice(fuelType);
+    if (price == null) return 'N/A';
+    final currency = fuelPrices?['currency'] ?? 'GHS';
+    return '$currency ${price.toStringAsFixed(2)}';
+  }
+
+
   //  SAVE SESSION AFTER LOGIN
   Future<void> _saveSession() async {
     final prefs = await SharedPreferences.getInstance();
@@ -51,7 +86,7 @@ class AuthState extends ChangeNotifier {
 
 
 Future<void> refreshSession() async {
-  await _saveSession();  // Force save current state
+  await _saveSession();  
   notifyListeners();
 }
 
@@ -79,7 +114,7 @@ Future<void> refreshSession() async {
     userRole = role;
     this.token = token;
     userPhotoUrl = photoUrl;
-    _saveSession();  // SAVE TO DISK
+    _saveSession();  // 
     notifyListeners();
   }
 
@@ -103,7 +138,7 @@ Future<void> refreshSession() async {
     userPhotoUrl = null;
     userRole = 'user';
     token = null;
-    await _clearSession();  // CLEAR FROM DISK
+    await _clearSession();  
     notifyListeners();
   }
 }

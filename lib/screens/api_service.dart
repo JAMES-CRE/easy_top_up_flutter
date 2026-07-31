@@ -1,1207 +1,3 @@
-/*import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:image_picker/image_picker.dart';
-import 'dart:io';
-
-class ApiService {
-  // ── BASE URL ──
-  static const String baseUrl =
-      'https://FinalProjectcom2026.pythonanywhere.com/api';
-
-  // ── HEADERS ──
-  static Map<String, String> get _headers => {
-        'Content-Type': 'application/json',
-      };
-
-  static Map<String, String> authHeaders(String token) => {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      };
-
-  // ─────────────────────────────────────────
-  // STATIONS
-  // ─────────────────────────────────────────
-
-  static Future<List<Map<String, dynamic>>> getStations() async {
-    try {
-      final response = await http
-          .get(
-            Uri.parse('$baseUrl/stations/'), // Note trailing slash
-            headers: _headers,
-          )
-          .timeout(const Duration(seconds: 10));
-
-      if (response.statusCode == 200) {
-        final body = jsonDecode(response.body);
-        // Django returns list directly, not wrapped in 'data'
-        return List<Map<String, dynamic>>.from(body);
-      } else {
-        throw Exception('Failed to load stations');
-      }
-    } catch (e) {
-      throw Exception('Network error: $e');
-    }
-  }
-
-  // ─────────────────────────────────────────
-  // AUTH
-  // ─────────────────────────────────────────
-
-static Future<Map<String, dynamic>> register({
-  required String name,
-  required String email,
-  required String password,
-  String role = 'user',
-  String? businessName,
-}) async {
-  try {
-    // Split name into first_name and last_name
-    final nameParts = name.trim().split(' ');
-    final firstName = nameParts.first;
-    final lastName = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
-
-    final response = await http.post(
-      Uri.parse('$baseUrl/users/register/'),
-      headers: _headers,
-      body: jsonEncode({
-        'email': email,
-        'first_name': firstName,
-        'last_name': lastName,
-        'password': password,
-        'role': role,
-        'business_name': businessName,
-      }),
-    ).timeout(const Duration(seconds: 10));
-
-    final body = jsonDecode(response.body);
-
-    if (response.statusCode == 201) {
-      final userData = body['data'];
-      
-      // Combine first_name and last_name
-      final fullName = '${userData['first_name'] ?? ''} ${userData['last_name'] ?? ''}'.trim();
-      
-      return {
-        'id': userData['id'],
-        'name': fullName.isEmpty ? email.split('@')[0] : fullName,
-        'email': userData['email'],
-        'role': userData['role'],
-        'token': userData['token'],
-        'photo_url': userData['photo_url'],
-        'business_name': userData['business_name'],
-      };
-    } else {
-      throw Exception(body['message'] ?? 'Registration failed');
-    }
-  } catch (e) {
-    throw Exception('$e');
-  }
-}
-
-
- /* static Future<Map<String, dynamic>> register({
-    required String name,
-    required String email,
-    required String password,
-    String role = 'user',
-    String? businessName,
-  }) async {
-    try {
-      // Split name into first_name and last_name
-      final nameParts = name.trim().split(' ');
-      final firstName = nameParts.first;
-      final lastName =
-          nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
-
-      final response = await http
-          .post(
-            Uri.parse('$baseUrl/users/register/'),
-            headers: _headers,
-            body: jsonEncode({
-              'email': email,
-              'first_name': firstName,
-              'last_name': lastName,
-              'password': password,
-              'role': role,
-              'business_name': businessName,
-            }),
-          )
-          .timeout(const Duration(seconds: 10));
-
-      final body = jsonDecode(response.body);
-
-      if (response.statusCode == 201) {
-        return body['data'];
-      } else {
-        throw Exception(body['message'] ?? 'Registration failed');
-      }
-    } catch (e) {
-      throw Exception('$e');
-    }
-  }*/
-
-  /*static Future<Map<String, dynamic>> login({
-    required String email,
-    required String password,
-  }) async {
-    try {
-      final response = await http
-          .post(
-            Uri.parse(
-                '$baseUrl/users/login/'), // Note: /users/login/ (trailing slash)
-            headers: _headers,
-            body: jsonEncode({'email': email, 'password': password}),
-          )
-          .timeout(const Duration(seconds: 10));
-
-      final body = jsonDecode(response.body);
-
-      if (response.statusCode == 200) {
-        // Django returns {success: true, data: {...}}
-        return body['data'];
-      } else {
-        throw Exception(body['message'] ?? 'Login failed');
-      }
-    } catch (e) {
-      throw Exception('$e');
-    }
-  }*/
-
-
-static Future<Map<String, dynamic>> login({
-  required String email,
-  required String password,
-}) async {
-  try {
-    final response = await http.post(
-      Uri.parse('$baseUrl/users/login/'),
-      headers: _headers,
-      body: jsonEncode({'email': email, 'password': password}),
-    ).timeout(const Duration(seconds: 10));
-
-    final body = jsonDecode(response.body);
-
-    if (response.statusCode == 200) {
-      final userData = body['data'];
-      
-      // Combine first_name and last_name into a single name field
-      final firstName = userData['first_name'] ?? '';
-      final lastName = userData['last_name'] ?? '';
-      final fullName = '$firstName $lastName'.trim();
-      
-      return {
-        'id': userData['id'],
-        'name': fullName.isEmpty ? userData['email'].split('@')[0] : fullName,
-        'email': userData['email'],
-        'role': userData['role'],
-        'token': userData['token'],
-        'photo_url': userData['photo_url'],
-      };
-    } else {
-      throw Exception(body['message'] ?? 'Login failed');
-    }
-  } catch (e) {
-    throw Exception('$e');
-  }
-}
-
-
-  // ─────────────────────────────────────────
-  // REPORTS
-  // ─────────────────────────────────────────
-
-  static Future<void> submitReport({
-    required String token,
-    required String stationId,
-    required String issueType,
-    required Map<String, dynamic> extraData,
-    required String notes,
-  }) async {
-    try {
-      final response = await http
-          .post(
-            Uri.parse('$baseUrl/reports'),
-            headers: authHeaders(token),
-            body: jsonEncode({
-              'station_id': stationId,
-              'issue_type': issueType,
-              'extra_data': extraData,
-              'notes': notes,
-            }),
-          )
-          .timeout(const Duration(seconds: 10));
-
-      if (response.statusCode != 201) {
-        final body = jsonDecode(response.body);
-        throw Exception(body['message'] ?? 'Failed to submit report');
-      }
-    } catch (e) {
-      throw Exception('$e');
-    }
-  }
-
-  static Future<List<Map<String, dynamic>>> getStationReports(
-      String stationId) async {
-    try {
-      final response = await http
-          .get(
-            Uri.parse('$baseUrl/reports/$stationId'),
-            headers: _headers,
-          )
-          .timeout(const Duration(seconds: 10));
-
-      if (response.statusCode == 200) {
-        final body = jsonDecode(response.body);
-        final List data = body['data'];
-        return data.cast<Map<String, dynamic>>();
-      } else {
-        throw Exception('Failed to fetch reports');
-      }
-    } catch (e) {
-      throw Exception('$e');
-    }
-  }
-
-  // ─────────────────────────────────────────
-  // OPERATOR STATIONS
-  // ─────────────────────────────────────────
-
-  /*static Future<void> addStation({
-    required String token,
-    required Map<String, dynamic> station,
-  }) async {
-    try {
-      final response = await http
-          .post(
-            Uri.parse('$baseUrl/stations'),
-            headers: authHeaders(token),
-            body: jsonEncode(station),
-          )
-          .timeout(const Duration(seconds: 10));
-
-      if (response.statusCode != 201) {
-        final body = jsonDecode(response.body);
-        throw Exception(body['message'] ?? 'Failed to add station');
-      }
-    } catch (e) {
-      throw Exception('$e');
-    }
-  }*/
-
-  
-
-static Future<void> addStation({
-  required String token,
-  required Map<String, dynamic> station,
-}) async {
-  try {
-    final body = jsonEncode(station);
-    print('Request body: $body');
-    
-    final response = await http.post(
-      Uri.parse('$baseUrl/stations/'),
-      headers: authHeaders(token),
-      body: body,
-    ).timeout(const Duration(seconds: 10));
-
-    print('Response status: ${response.statusCode}');
-    print('Response body: ${response.body}');
-
-    if (response.statusCode != 201) {
-      throw Exception('Failed to add station: ${response.body}');
-    }
-  } catch (e) {
-    print('Error: $e');
-    throw Exception('$e');
-  }
-}
-
-  
-
-  static Future<void> updatePrice({
-    required String token,
-    required String stationId,
-    required String price,
-  }) async {
-    try {
-      final response = await http
-          .put(
-            Uri.parse('$baseUrl/stations/$stationId/price'),
-            headers: authHeaders(token),
-            body: jsonEncode({'price': price}),
-          )
-          .timeout(const Duration(seconds: 10));
-
-      if (response.statusCode != 200) {
-        final body = jsonDecode(response.body);
-        throw Exception(body['message'] ?? 'Failed to update price');
-      }
-    } catch (e) {
-      throw Exception('$e');
-    }
-  }
-
-  static Future<void> updatePowerOutput({
-    required String token,
-    required String stationId,
-    required String powerOutput,
-  }) async {
-    try {
-      final response = await http
-          .put(
-            Uri.parse('$baseUrl/stations/$stationId/power'),
-            headers: authHeaders(token),
-            body: jsonEncode({'power_output': powerOutput}),
-          )
-          .timeout(const Duration(seconds: 10));
-
-      if (response.statusCode != 200) {
-        final body = jsonDecode(response.body);
-        throw Exception(body['message'] ?? 'Failed to update power output');
-      }
-    } catch (e) {
-      throw Exception('$e');
-    }
-  }
-
-  static Future<void> updateStatus({
-    required String token,
-    required String stationId,
-    required String status,
-  }) async {
-    try {
-      final response = await http
-          .put(
-            Uri.parse('$baseUrl/stations/$stationId/status'),
-            headers: authHeaders(token),
-            body: jsonEncode({'status': status}),
-          )
-          .timeout(const Duration(seconds: 10));
-
-      if (response.statusCode != 200) {
-        final body = jsonDecode(response.body);
-        throw Exception(body['message'] ?? 'Failed to update status');
-      }
-    } catch (e) {
-      throw Exception('$e');
-    }
-  }
-
-  static Future<Map<String, dynamic>?> getMyStation({
-    required String token,
-  }) async {
-    try {
-      final response = await http
-          .get(
-            Uri.parse('$baseUrl/stations/my-station'),
-            headers: authHeaders(token),
-          )
-          .timeout(const Duration(seconds: 10));
-
-      final body = jsonDecode(response.body);
-
-      if (response.statusCode == 200) {
-        return body['data'];
-      } else if (response.statusCode == 404) {
-        return null;
-      } else {
-        throw Exception(body['message'] ?? 'Failed to fetch station');
-      }
-    } catch (e) {
-      throw Exception('$e');
-    }
-  }
-
-  static Future<void> updateStation({
-    required String token,
-    required String stationId,
-    required Map<String, dynamic> updatedData,
-  }) async {
-    try {
-      final response = await http
-          .put(
-            Uri.parse('$baseUrl/stations/$stationId'),
-            headers: authHeaders(token),
-            body: jsonEncode(updatedData),
-          )
-          .timeout(const Duration(seconds: 10));
-
-      final body = jsonDecode(response.body);
-
-      if (response.statusCode != 200) {
-        throw Exception(body['message'] ?? 'Failed to update station');
-      }
-    } catch (e) {
-      throw Exception('$e');
-    }
-  }
-
-  static Future<List<Map<String, dynamic>>> getMyStations({
-    required String token,
-  }) async {
-    try {
-      final response = await http
-          .get(
-            Uri.parse('$baseUrl/stations/my-stations'),
-            headers: authHeaders(token),
-          )
-          .timeout(const Duration(seconds: 10));
-
-      final body = jsonDecode(response.body);
-
-      if (response.statusCode == 200) {
-        return List<Map<String, dynamic>>.from(body['data']);
-      } else {
-        throw Exception(body['message'] ?? 'Failed to fetch stations');
-      }
-    } catch (e) {
-      throw Exception('$e');
-    }
-  }
-
-  // ─────────────────────────────────────────
-  // PHOTO UPLOADS
-  // ─────────────────────────────────────────
-
-  static Future<List<String>> uploadPhotos({
-    required String token,
-    required List<XFile> photos,
-  }) async {
-    try {
-      var uri = Uri.parse('$baseUrl/upload');
-      var request = http.MultipartRequest('POST', uri);
-
-      request.headers['Authorization'] = 'Bearer $token';
-
-      for (int i = 0; i < photos.length; i++) {
-        final photo = photos[i];
-        final file = File(photo.path);
-
-        if (!await file.exists()) {
-          continue;
-        }
-
-        final multipartFile = await http.MultipartFile.fromPath(
-          'photos',
-          file.path,
-        );
-        request.files.add(multipartFile);
-      }
-
-      if (request.files.isEmpty) {
-        throw Exception('No valid files to upload');
-      }
-
-      final response = await request.send();
-      final responseData = await response.stream.bytesToString();
-      final decoded = jsonDecode(responseData);
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        return List<String>.from(decoded['data']);
-      } else {
-        throw Exception(decoded['message'] ?? 'Upload failed');
-      }
-    } catch (e) {
-      throw Exception('Failed to upload photos: $e');
-    }
-  }
-
-  // ── UPLOAD PROFILE PHOTO ──
-  static Future<String?> uploadProfilePhoto({
-    required String token,
-    required XFile photo,
-  }) async {
-    try {
-      var request = http.MultipartRequest(
-        'POST',
-        Uri.parse('$baseUrl/upload/profile'),
-      );
-
-      request.headers['Authorization'] = 'Bearer $token';
-
-      final bytes = await photo.readAsBytes();
-      final multipartFile = http.MultipartFile.fromBytes(
-        'photo',
-        bytes,
-        filename: 'profile_${DateTime.now().millisecondsSinceEpoch}.jpg',
-      );
-      request.files.add(multipartFile);
-
-      final response = await request.send();
-      final responseData = await response.stream.bytesToString();
-      final decoded = jsonDecode(responseData);
-
-      if (response.statusCode == 200) {
-        return decoded['data'];
-      } else {
-        throw Exception(decoded['message'] ?? 'Upload failed');
-      }
-    } catch (e) {
-      throw Exception('Failed to upload profile photo: $e');
-    }
-  }
-
-  // ── UPDATE USER PROFILE ──
-  static Future<Map<String, dynamic>> updateProfile({
-    required String token,
-    String? name,
-    String? email,
-    String? photoUrl,
-  }) async {
-    try {
-      final Map<String, dynamic> body = {};
-      if (name != null) body['name'] = name;
-      if (email != null) body['email'] = email;
-      if (photoUrl != null) body['photo_url'] = photoUrl;
-
-      final response = await http
-          .put(
-            Uri.parse('$baseUrl/auth/profile'),
-            headers: authHeaders(token),
-            body: jsonEncode(body),
-          )
-          .timeout(const Duration(seconds: 10));
-
-      final responseBody = jsonDecode(response.body);
-
-      if (response.statusCode == 200) {
-        return responseBody['data'];
-      } else {
-        throw Exception(responseBody['message'] ?? 'Failed to update profile');
-      }
-    } catch (e) {
-      throw Exception('$e');
-    }
-  }
-}
-*/
-
-/*import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:image_picker/image_picker.dart';
-import 'dart:io';
-import 'auth_state.dart';
-
-class ApiService {
-  // ── BASE URL ── (Update with your PythonAnywhere URL)
-  static const String baseUrl = 'https://FinalProjectcom2026.pythonanywhere.com/api';
-  
-
-  // ── HEADERS ──
-  static Map<String, String> get _headers => {
-        'Content-Type': 'application/json',
-      };
-
-  static Map<String, String> authHeaders(String token) => {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      };
-
-  // ─────────────────────────────────────────
-  // AUTHENTICATION
-  // ─────────────────────────────────────────
-
-  // REGISTER
-  static Future<Map<String, dynamic>> register({
-    required String name,
-    required String email,
-    required String password,
-    String role = 'user',
-    String? businessName,
-  }) async {
-    try {
-      // Split name into first_name and last_name
-      final nameParts = name.trim().split(' ');
-      final firstName = nameParts.first;
-      final lastName = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
-
-      final response = await http.post(
-        Uri.parse('$baseUrl/users/register/'),
-        headers: _headers,
-        body: jsonEncode({
-          'email': email,
-          'first_name': firstName,
-          'last_name': lastName,
-          'password': password,
-          'role': role,
-          'business_name': businessName,
-        }),
-      ).timeout(const Duration(seconds: 10));
-
-      final body = jsonDecode(response.body);
-
-      if (response.statusCode == 201) {
-        final userData = body['data'];
-        final fullName = '${userData['first_name'] ?? ''} ${userData['last_name'] ?? ''}'.trim();
-        
-        return {
-          'id': userData['id'],
-          'name': fullName.isEmpty ? email.split('@')[0] : fullName,
-          'email': userData['email'],
-          'role': userData['role'],
-          'token': userData['token'],
-          'photo_url': userData['photo_url'],
-          'business_name': userData['business_name'],
-        };
-      } else {
-        throw Exception(body['message'] ?? 'Registration failed');
-      }
-    } catch (e) {
-      throw Exception('$e');
-    }
-  }
-
-  // LOGIN
-  static Future<Map<String, dynamic>> login({
-    required String email,
-    required String password,
-  }) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/users/login/'),
-        headers: _headers,
-        body: jsonEncode({'email': email, 'password': password}),
-      ).timeout(const Duration(seconds: 10));
-
-      final body = jsonDecode(response.body);
-
-      if (response.statusCode == 200) {
-        final userData = body['data'];
-        final firstName = userData['first_name'] ?? '';
-        final lastName = userData['last_name'] ?? '';
-        final fullName = '$firstName $lastName'.trim();
-        
-        return {
-          'id': userData['id'],
-          'name': fullName.isEmpty ? email.split('@')[0] : fullName,
-          'email': userData['email'],
-          'role': userData['role'],
-          'token': userData['token'],
-          'photo_url': userData['photo_url'],
-        };
-      } else {
-        throw Exception(body['message'] ?? 'Login failed');
-      }
-    } catch (e) {
-      throw Exception('$e');
-    }
-  }
-
-  // GET PROFILE
-  static Future<Map<String, dynamic>> getProfile({
-    required String token,
-  }) async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/users/profile/'),
-        headers: authHeaders(token),
-      ).timeout(const Duration(seconds: 10));
-
-      final body = jsonDecode(response.body);
-
-      if (response.statusCode == 200) {
-        final userData = body;
-        final firstName = userData['first_name'] ?? '';
-        final lastName = userData['last_name'] ?? '';
-        final fullName = '$firstName $lastName'.trim();
-        
-        return {
-          'id': userData['id'],
-          'name': fullName,
-          'email': userData['email'],
-          'role': userData['role'],
-          'phone': userData['phone'],
-          'business_name': userData['business_name'],
-          'photo_url': userData['photo_url'],
-        };
-      } else {
-        throw Exception('Failed to get profile');
-      }
-    } catch (e) {
-      throw Exception('$e');
-    }
-  }
-
-  // UPDATE PROFILE
-  /*static Future<Map<String, dynamic>> updateProfile({
-    required String token,
-    String? name,
-    String? email,
-    String? phone,
-    String? photoUrl,
-  }) async {
-    try {
-      final Map<String, dynamic> body = {};
-      
-      if (name != null) {
-        final nameParts = name.trim().split(' ');
-        body['first_name'] = nameParts.first;
-        if (nameParts.length > 1) {
-          body['last_name'] = nameParts.sublist(1).join(' ');
-        }
-      }
-      if (email != null) body['email'] = email;
-      if (phone != null) body['phone'] = phone;
-      if (photoUrl != null) body['photo_url'] = photoUrl;
-
-      final response = await http.put(
-        Uri.parse('$baseUrl/users/profile/update/'),
-        headers: authHeaders(token),
-        body: jsonEncode(body),
-      ).timeout(const Duration(seconds: 10));
-
-      final responseBody = jsonDecode(response.body);
-
-      if (response.statusCode == 200) {
-        return responseBody['data'];
-      } else {
-        throw Exception(responseBody['message'] ?? 'Failed to update profile');
-      }
-    } catch (e) {
-      throw Exception('$e');
-    }
-  }*/
-
-
-  static Future<Map<String, dynamic>> updateProfile({
-  required String token,
-  String? name,
-  String? email,
-  String? photoUrl,
-}) async {
-  try {
-    final Map<String, dynamic> body = {};
-    
-    // Get current user email from AuthState
-    final currentEmail = AuthState.instance.userEmail;
-    
-    // Always send email (current or new)
-    body['email'] = email ?? currentEmail ?? '';
-    
-    if (name != null) {
-      final nameParts = name.trim().split(' ');
-      body['first_name'] = nameParts.first;
-      if (nameParts.length > 1) {
-        body['last_name'] = nameParts.sublist(1).join(' ');
-      }
-    }
-    if (photoUrl != null) body['photo_url'] = photoUrl;
-    
-    final response = await http.put(
-      
-      Uri.parse('$baseUrl/users/profile/update/'),
-      headers: authHeaders(token),
-      body: jsonEncode(body),
-    ).timeout(const Duration(seconds: 10));
-
-    print('Response status: ${response.statusCode}');
-    print('Response body: ${response.body}');
-    
-
-    if (response.statusCode == 200) {
-      final responseBody = jsonDecode(response.body);
-
-       print('Parsed response: $responseBody');
-
-      if (responseBody.containsKey('data')) {
-        return responseBody['data'];
-      } else {
-        return responseBody;
-      }
-    } else {
-      throw Exception('Failed to update profile');
-    }
-  } catch (e) {
-    throw Exception('$e');
-  }
-}
-
-  // ─────────────────────────────────────────
-  // STATIONS
-  // ─────────────────────────────────────────
-
-  // GET ALL STATIONS (Public - only verified)
-  static Future<List<Map<String, dynamic>>> getStations() async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/stations/'),
-        headers: _headers,
-      ).timeout(const Duration(seconds: 10));
-
-      if (response.statusCode == 200) {
-        final List data = jsonDecode(response.body);
-        return data.cast<Map<String, dynamic>>();
-      } else {
-        throw Exception('Failed to load stations');
-      }
-    } catch (e) {
-      throw Exception('Network error: $e');
-    }
-  }
-
-  // GET OPERATOR'S STATIONS
-  static Future<List<Map<String, dynamic>>> getMyStations({
-    required String token,
-  }) async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/stations/my-stations/'),
-        headers: authHeaders(token),
-      ).timeout(const Duration(seconds: 10));
-
-      if (response.statusCode == 200) {
-        final List data = jsonDecode(response.body);
-        return data.cast<Map<String, dynamic>>();
-      } else {
-        return [];
-      }
-    } catch (e) {
-      return [];
-    }
-  }
-
-  // GET SINGLE STATION
-  static Future<Map<String, dynamic>> getStation({
-    required String stationId,
-  }) async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/stations/$stationId/'),
-        headers: _headers,
-      ).timeout(const Duration(seconds: 10));
-
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body);
-      } else {
-        throw Exception('Station not found');
-      }
-    } catch (e) {
-      throw Exception('$e');
-    }
-  }
-
-  // ADD STATION (Operator only)
-  static Future<void> addStation({
-    required String token,
-    required Map<String, dynamic> station,
-  }) async {
-    try {
-       print('Sending station data: ${jsonEncode(station)}');  // Debug
-      // Remove fields that should not be sent
-      final cleanedStation = Map<String, dynamic>.from(station);
-      cleanedStation.remove('id'); // Let Django auto-generate
-      cleanedStation.remove('pending');
-      cleanedStation.remove('verified');
-      cleanedStation.remove('created_at');
-      
-      final response = await http.post(
-        Uri.parse('$baseUrl/stations/'),
-        headers: authHeaders(token),
-        body: jsonEncode(cleanedStation),
-      ).timeout(const Duration(seconds: 10));
-
-      print('Response status: ${response.statusCode}');
-    print('Response body: ${response.body}');
-
-      if (response.statusCode != 201) {
-        final body = jsonDecode(response.body);
-        throw Exception(body['error'] ?? 'Failed to add station');
-      }
-    } catch (e) {
-      throw Exception('$e');
-    }
-  }
-
-  // UPDATE STATION (Full update)
-  /*static Future<void> updateStation({
-    required String token,
-    required String stationId,
-    required Map<String, dynamic> updatedData,
-  }) async {
-    try {
-      final response = await http.put(
-        Uri.parse('$baseUrl/stations/$stationId/'),
-        headers: authHeaders(token),
-        body: jsonEncode(updatedData),
-      ).timeout(const Duration(seconds: 10));
-
-      if (response.statusCode != 200) {
-        final body = jsonDecode(response.body);
-        throw Exception(body['message'] ?? 'Failed to update station');
-      }
-    } catch (e) {
-      throw Exception('$e');
-    }
-  }*/
-
-  static Future<void> updateStation({
-  required String token,
-  required String stationId,
-  required Map<String, dynamic> updatedData,
-}) async {
-  try {
-    print('=== UPDATE STATION API ===');
-    print('URL: $baseUrl/stations/$stationId/');
-    print('Data: $updatedData');
-    
-    final response = await http.put(
-      Uri.parse('$baseUrl/stations/$stationId/'),
-      headers: authHeaders(token),
-      body: jsonEncode(updatedData),
-    ).timeout(const Duration(seconds: 10));
-
-    print('Response status: ${response.statusCode}');
-    print('Response body: ${response.body}');
-
-    if (response.statusCode != 200) {
-      // Try to parse the error message
-      try {
-        final errorBody = jsonDecode(response.body);
-        throw Exception(errorBody['error'] ?? errorBody['message'] ?? 'Failed to update station');
-      } catch (e) {
-        throw Exception('Failed to update station: ${response.body}');
-      }
-    }
-  } catch (e) {
-    print('Update error: $e');
-    throw Exception('$e');
-  }
-}
-
-  // UPDATE PRICE
-  static Future<void> updatePrice({
-    required String token,
-    required String stationId,
-    required String price,
-  }) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/stations/$stationId/update-price/'),
-        headers: authHeaders(token),
-        body: jsonEncode({'price': price}),
-      ).timeout(const Duration(seconds: 10));
-
-      if (response.statusCode != 200) {
-        final body = jsonDecode(response.body);
-        throw Exception(body['error'] ?? 'Failed to update price');
-      }
-    } catch (e) {
-      throw Exception('$e');
-    }
-  }
-
-  // UPDATE STATUS
-  static Future<void> updateStatus({
-    required String token,
-    required String stationId,
-    required String status,
-  }) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/stations/$stationId/update-status/'),
-        headers: authHeaders(token),
-        body: jsonEncode({'status': status}),
-      ).timeout(const Duration(seconds: 10));
-
-      if (response.statusCode != 200) {
-        final body = jsonDecode(response.body);
-        throw Exception(body['error'] ?? 'Failed to update status');
-      }
-    } catch (e) {
-      throw Exception('$e');
-    }
-  }
-
-  // UPDATE POWER OUTPUT (EV only)
-  static Future<void> updatePowerOutput({
-    required String token,
-    required String stationId,
-    required String powerOutput,
-  }) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/stations/$stationId/update-power/'),
-        headers: authHeaders(token),
-        body: jsonEncode({'power_output': powerOutput}),
-      ).timeout(const Duration(seconds: 10));
-
-      if (response.statusCode != 200) {
-        final body = jsonDecode(response.body);
-        throw Exception(body['error'] ?? 'Failed to update power output');
-      }
-    } catch (e) {
-      throw Exception('$e');
-    }
-  }
-
-  // DELETE STATION
-  static Future<void> deleteStation({
-    required String token,
-    required String stationId,
-  }) async {
-    try {
-      final response = await http.delete(
-        Uri.parse('$baseUrl/stations/$stationId/'),
-        headers: authHeaders(token),
-      ).timeout(const Duration(seconds: 10));
-
-      if (response.statusCode != 204 && response.statusCode != 200) {
-        final body = jsonDecode(response.body);
-        throw Exception(body['message'] ?? 'Failed to delete station');
-      }
-    } catch (e) {
-      throw Exception('$e');
-    }
-  }
-
-
- // ─────────────────────────────────────────
-// REPORTS
-// ─────────────────────────────────────────
-
-// Submit a report
-static Future<void> submitReport({
-  required String token,
-  required String stationId,
-  required String issueType,
-  required Map<String, dynamic> extraData,
-  required String notes,
-  String? photoUrl,
-}) async {
-  try {
-    final response = await http.post(
-      Uri.parse('$baseUrl/reports/'),
-      headers: authHeaders(token),
-      body: jsonEncode({
-        'station': stationId,
-        'issue_type': issueType,
-        'extra_data': extraData,
-        'notes': notes,
-        'photo_url': photoUrl,
-      }),
-    ).timeout(const Duration(seconds: 10));
-
-    print('Report response status: ${response.statusCode}');
-    print('Report response body: ${response.body}');
-
-    if (response.statusCode != 201) {
-      throw Exception('Failed to submit report');
-    }
-  } catch (e) {
-    throw Exception('$e');
-  }
-}
-
-// Get reports for a station
-static Future<List<Map<String, dynamic>>> getStationReports({
-  required String stationId,
-  required String token,
-}) async {
-  try {
-    final response = await http.get(
-      Uri.parse('$baseUrl/reports/?station=$stationId'),
-      headers: authHeaders(token),
-    ).timeout(const Duration(seconds: 10));
-
-    if (response.statusCode == 200) {
-      final List data = jsonDecode(response.body);
-      return data.cast<Map<String, dynamic>>();
-    } else {
-      throw Exception('Failed to fetch reports');
-    }
-  } catch (e) {
-    throw Exception('$e');
-  }
-}
-
-
-
-
-
-
-  // ─────────────────────────────────────────
-  // PHOTO UPLOADS (Cloudinary)
-  // ─────────────────────────────────────────
-
-  static Future<List<String>> uploadPhotos({
-    required String token,
-    required List<XFile> photos,
-  }) async {
-    try {
-      var uri = Uri.parse('$baseUrl/upload/');
-      var request = http.MultipartRequest('POST', uri);
-      
-      request.headers['Authorization'] = 'Bearer $token';
-      
-      for (int i = 0; i < photos.length; i++) {
-        final photo = photos[i];
-        final file = File(photo.path);
-        
-        if (!await file.exists()) continue;
-        
-        final multipartFile = await http.MultipartFile.fromPath(
-          'photos',
-          file.path,
-        );
-        request.files.add(multipartFile);
-      }
-      
-      if (request.files.isEmpty) {
-        throw Exception('No valid files to upload');
-      }
-      
-      final response = await request.send();
-      final responseData = await response.stream.bytesToString();
-      final decoded = jsonDecode(responseData);
-      
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        return List<String>.from(decoded['data']);
-      } else {
-        throw Exception(decoded['message'] ?? 'Upload failed');
-      }
-    } catch (e) {
-      throw Exception('Failed to upload photos: $e');
-    }
-  }
-
-
-
-// ── UPLOAD PROFILE PHOTO ──
-  static Future<String?> uploadProfilePhoto({
-    required String token,
-    required XFile photo,
-  }) async {
-    try {
-      var request = http.MultipartRequest(
-        'POST',
-        Uri.parse('$baseUrl/upload/profile/'),
-      );
-      
-      request.headers['Authorization'] = 'Bearer $token';
-      
-      final bytes = await photo.readAsBytes();
-      final multipartFile = http.MultipartFile.fromBytes(
-        'photo',
-        bytes,
-        filename: 'profile_${DateTime.now().millisecondsSinceEpoch}.jpg',
-      );
-      request.files.add(multipartFile);
-      
-      final response = await request.send();
-      final responseData = await response.stream.bytesToString();
-      final decoded = jsonDecode(responseData);
-      
-      if (response.statusCode == 200) {
-        return decoded['data'];
-      } else {
-        throw Exception(decoded['message'] ?? 'Upload failed');
-      }
-    } catch (e) {
-      throw Exception('Failed to upload profile photo: $e');
-    }
-  }
-}*/
-
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
@@ -1209,11 +5,11 @@ import 'package:image_picker/image_picker.dart';
 import 'auth_state.dart';
 
 class ApiService {
-  // ── BASE URL ── (Update with your PythonAnywhere URL)
+  // BASE URL
   static const String baseUrl =
       'https://FinalProjectcom2026.pythonanywhere.com/api';
 
-  // ── HEADERS ──
+  // HEADERS
   static Map<String, String> get _headers => {
         'Content-Type': 'application/json',
       };
@@ -1223,9 +19,8 @@ class ApiService {
         'Authorization': 'Bearer $token',
       };
 
-  // ─────────────────────────────────────────
-  // AUTHENTICATION
-  // ─────────────────────────────────────────
+
+   
 
   // REGISTER
   static Future<Map<String, dynamic>> register({
@@ -1410,11 +205,7 @@ class ApiService {
     }
   }
 
-  // ─────────────────────────────────────────
-  // STATIONS
-  // ─────────────────────────────────────────
-
-  // GET ALL STATIONS (Public - only verified)
+  // GET ALL STATIONS 
   static Future<List<Map<String, dynamic>>> getStations() async {
     try {
       final response = await http
@@ -1480,64 +271,29 @@ class ApiService {
     }
   }
 
-  // ADD STATION (Operator only)
-  /*static Future<void> addStation({
+  static Future<void> addStation({
     required String token,
     required Map<String, dynamic> station,
   }) async {
     try {
-      print('Sending station data: ${jsonEncode(station)}');
-
-      // Remove fields that should not be sent
-      final cleanedStation = Map<String, dynamic>.from(station);
-      cleanedStation.remove('id'); // Let Django auto-generate
-      cleanedStation.remove('pending');
-      cleanedStation.remove('verified');
-      cleanedStation.remove('created_at');
-
       final response = await http
           .post(
             Uri.parse('$baseUrl/stations/'),
             headers: authHeaders(token),
-            body: jsonEncode(cleanedStation),
+            body: jsonEncode(station), // Send as-is
           )
           .timeout(const Duration(seconds: 10));
 
-      print('Response status: ${response.statusCode}');
-      print('Response body: ${response.body}');
+      print('Add station response status: ${response.statusCode}');
+      print('Add station response body: ${response.body}');
 
       if (response.statusCode != 201) {
-        final body = jsonDecode(response.body);
-        throw Exception(body['error'] ?? 'Failed to add station');
+        throw Exception('Failed to add station');
       }
     } catch (e) {
       throw Exception('$e');
     }
-  }*/
-
-  
-
-  static Future<void> addStation({
-  required String token,
-  required Map<String, dynamic> station,
-}) async {
-  try {
-    final response = await http.post(
-      Uri.parse('$baseUrl/stations/'),
-      headers: authHeaders(token),
-      body: jsonEncode(station),  // Send as-is
-    ).timeout(const Duration(seconds: 10));
-
-    print('Add station response status: ${response.statusCode}');
-    print('Add station response body: ${response.body}');
-
-    if (response.statusCode != 201) {
-      throw Exception('Failed to add station');
-    }
-  } catch (e) {
-    throw Exception('$e');
   }
-}
 
   // UPDATE STATION (Full update)
   static Future<void> updateStation({
@@ -1576,6 +332,7 @@ class ApiService {
       throw Exception('$e');
     }
   }
+
 
   // UPDATE PRICE
   static Future<void> updatePrice({
@@ -1649,31 +406,25 @@ class ApiService {
     }
   }
 
-  // DELETE STATION
-  static Future<void> deleteStation({
-    required String token,
-    required String stationId,
-  }) async {
-    try {
-      final response = await http
-          .delete(
-            Uri.parse('$baseUrl/stations/$stationId/'),
-            headers: authHeaders(token),
-          )
-          .timeout(const Duration(seconds: 10));
+  // DELETE STATION 
+static Future<void> deleteStation({
+  required String token,
+  required String stationId,
+}) async {
+  try {
+    final response = await http.delete(
+      Uri.parse('$baseUrl/stations/$stationId/'),
+      headers: authHeaders(token),
+    ).timeout(const Duration(seconds: 10));
 
-      if (response.statusCode != 204 && response.statusCode != 200) {
-        final body = jsonDecode(response.body);
-        throw Exception(body['message'] ?? 'Failed to delete station');
-      }
-    } catch (e) {
-      throw Exception('$e');
+    if (response.statusCode != 204 && response.statusCode != 200) {
+      final body = jsonDecode(response.body);
+      throw Exception(body['error'] ?? 'Failed to delete station');
     }
+  } catch (e) {
+    throw Exception('$e');
   }
-
-  // ─────────────────────────────────────────
-  // REPORTS
-  // ─────────────────────────────────────────
+}
 
   // Submit a report
   static Future<void> submitReport({
@@ -1710,22 +461,26 @@ class ApiService {
     }
   }
 
-  // Get reports for a station
-  static Future<List<Map<String, dynamic>>> getStationReports({
+  static Future<dynamic> getStationReports({
     required String stationId,
     required String token,
   }) async {
     try {
       final response = await http
           .get(
-            Uri.parse('$baseUrl/reports/?station=$stationId'),
+            Uri.parse('$baseUrl/reports/reports/?station=$stationId'),
             headers: authHeaders(token),
           )
           .timeout(const Duration(seconds: 10));
 
+      print('=== GET STATION REPORTS ===');
+      print('URL: $baseUrl/reports/?station=$stationId');
+      print('Status: ${response.statusCode}');
+      print('Response: ${response.body}');
+
       if (response.statusCode == 200) {
-        final List data = jsonDecode(response.body);
-        return data.cast<Map<String, dynamic>>();
+        final data = jsonDecode(response.body);
+        return data;
       } else {
         throw Exception('Failed to fetch reports');
       }
@@ -1734,29 +489,72 @@ class ApiService {
     }
   }
 
-// Get reviews for a specific station
-  static Future<List<Map<String, dynamic>>> getStationReviews({
-    required String token, // ← ADD THIS
-    required String stationId,
+// REPLY TO REPORT 
+  static Future<void> replyToReport({
+    required String token,
+    required String reportId,
+    required String reply,
   }) async {
     try {
       final response = await http
-          .get(
-            Uri.parse('$baseUrl/reports/reviews/?station=$stationId'),
-            headers: authHeaders(token), // ← FIX: Now includes Bearer token
+          .post(
+            Uri.parse('$baseUrl/reports/reports/$reportId/reply/'),
+            headers: authHeaders(token),
+            body: jsonEncode({
+              'reply': reply,
+            }),
           )
           .timeout(const Duration(seconds: 10));
 
-      if (response.statusCode == 200) {
-        final List data = jsonDecode(response.body);
-        return data.cast<Map<String, dynamic>>();
-      } else {
-        throw Exception('Failed to load reviews');
+      print('Reply response status: ${response.statusCode}');
+      print('Reply response body: ${response.body}');
+
+      if (response.statusCode != 200) {
+        final body = jsonDecode(response.body);
+        throw Exception(body['message'] ?? 'Failed to send reply');
       }
     } catch (e) {
       throw Exception('$e');
     }
   }
+
+
+
+static Future<List<Map<String, dynamic>>> getStationReviews({
+  String? token,
+  required String stationId,
+}) async {
+  try {
+    final headers = <String, String>{
+      'Content-Type': 'application/json',
+    };
+    
+    if (token != null && token.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $token';
+    }
+
+    final response = await http.get(
+      Uri.parse('$baseUrl/reports/reviews/?station=$stationId'),
+      headers: headers,
+    ).timeout(const Duration(seconds: 10));
+
+    print('=== GET STATION REVIEWS ===');
+    print('URL: $baseUrl/reports/reviews/?station=$stationId');
+    print('Status: ${response.statusCode}');
+    print('Has token: ${token != null && token.isNotEmpty}');
+
+    if (response.statusCode == 200) {
+      final List data = jsonDecode(response.body);
+      return data.cast<Map<String, dynamic>>();
+    } else {
+      print('Failed to load reviews: ${response.body}');
+      return [];
+    }
+  } catch (e) {
+    print('Error loading reviews: $e');
+    return [];
+  }
+}
 
 // Add a new review
   static Future<Map<String, dynamic>> addReview({
@@ -1788,11 +586,7 @@ class ApiService {
     }
   }
 
-  // ─────────────────────────────────────────
-// DIRECT CLOUDINARY UPLOADS (No backend needed)
-// ─────────────────────────────────────────
-
-// Upload single photo directly to Cloudinary (for reports)
+// Upload single photo directly to Cloudinary 
   static Future<String?> uploadPhotoToCloudinary({
     required XFile photo,
   }) async {
@@ -1832,7 +626,7 @@ class ApiService {
     }
   }
 
-// Upload multiple photos directly to Cloudinary (for stations)
+// Upload multiple photos directly to Cloudinary
   static Future<List<String>> uploadMultiplePhotosToCloudinary({
     required List<XFile> photos,
   }) async {
@@ -1873,7 +667,7 @@ class ApiService {
     return urls;
   }
 
-// Upload profile photo directly to Cloudinary (for profile picture)
+// Upload profile photo directly to Cloudinary
   static Future<String?> uploadProfilePhoto({
     required XFile photo,
   }) async {
@@ -1911,5 +705,388 @@ class ApiService {
       print('Cloudinary profile upload error: $e');
       return null;
     }
+  }
+
+  // FUEL PRICES (GhanaAPI)
+
+  static Future<Map<String, dynamic>> getFuelPrices() async {
+    try {
+      // First try the real API
+      final response = await http
+          .get(
+            Uri.parse('https://api.ghana-api.dev/api/v1/transport/fuel-prices'),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        // Check if we got valid data
+        if (data['success'] == true && data['data']['petrol'] > 0) {
+          return data;
+        }
+      }
+
+      // If API fails, return mock data
+      print('Using mock fuel price data (API unavailable)');
+      return _getMockFuelPrices();
+    } catch (e) {
+      print('Fuel price API error: $e');
+      // Return mock data on error
+      return _getMockFuelPrices();
+    }
+  }
+
+  static Map<String, dynamic> _getMockFuelPrices() {
+    return {
+      'success': true,
+      'data': {
+        'petrol': 14.80,
+        'diesel': 16.20,
+        'lpg': 12.70,
+        'currency': 'GHS',
+        'lastUpdated': DateTime.now().toIso8601String(),
+        'source': 'Mock Data (API temporarily unavailable)',
+        'status': 'success',
+      }
+    };
+  }
+
+  // GOOGLE PLACES API - ALL FUEL TYPES
+
+  static const String googleApiKey = 'AIzaSyDD6GbX4F4d6NgNk_at_d06205lzkhI9Ck';
+
+// GOOGLE PLACES
+  static Future<List<Map<String, dynamic>>> getNearbyFuelStations(
+    double lat,
+    double lng, {
+    int radius = 5000,
+  }) async {
+    List<Map<String, dynamic>> allStations = [];
+
+    try {
+      //  Get Petrol/Diesel stations
+      final petrolStations = await _fetchGooglePlaces(
+        lat,
+        lng,
+        radius,
+        ['gas_station'],
+        'Petrol/Diesel',
+      );
+      allStations.addAll(petrolStations);
+
+      // Get EV charging stations
+      final evStations = await _fetchGooglePlaces(
+        lat,
+        lng,
+        radius,
+        ['electric_vehicle_charging_station'],
+        'EV',
+      );
+      allStations.addAll(evStations);
+
+      //  Search for LPG by text
+      final lpgStations = await _fetchLpgStations(lat, lng, radius);
+      allStations.addAll(lpgStations);
+
+      //  Remove duplicates by place ID
+      final seen = <String>{};
+      allStations = allStations.where((s) {
+        final id = s['id'] as String;
+        return seen.add(id);
+      }).toList();
+
+      print(' Total Google stations: ${allStations.length}');
+      return allStations;
+    } catch (e) {
+      print(' Error fetching Google stations: $e');
+      return allStations;
+    }
+  }
+
+// FETCH BY TYPE
+
+  static Future<List<Map<String, dynamic>>> _fetchGooglePlaces(
+    double lat,
+    double lng,
+    int radius,
+    List<String> types,
+    String fuelType,
+  ) async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse('https://places.googleapis.com/v1/places:searchNearby'),
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Goog-Api-Key': googleApiKey,
+              'X-Goog-FieldMask':
+                  'places.id,places.displayName,places.location,'
+                      'places.types,places.editorialSummary',
+            },
+            body: jsonEncode({
+              'includedTypes': types,
+              'locationRestriction': {
+                'circle': {
+                  'center': {'latitude': lat, 'longitude': lng},
+                  'radius': radius.toDouble(),
+                },
+              },
+              'maxResultCount': 20,
+            }),
+          )
+          .timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final places = data['places'] as List? ?? [];
+        print(' Found ${places.length} $fuelType from Google');
+
+        return places
+            .map((p) => _parseGooglePlace(p, fuelType))
+            .where((s) => s['lat'] != 0.0 && s['lng'] != 0.0)
+            .toList();
+      } else {
+        print('Google API ${response.statusCode}: ${response.body}');
+        return [];
+      }
+    } catch (e) {
+      print(' Fetch error for $fuelType: $e');
+      return [];
+    }
+  }
+
+// FETCH LPG BY TEXT SEARCH
+
+  static Future<List<Map<String, dynamic>>> _fetchLpgStations(
+    double lat,
+    double lng,
+    int radius,
+  ) async {
+    // ── Search multiple LPG-related terms ──
+    final queries = [
+      'LPG gas station',
+      'cooking gas refill',
+      'autogas station',
+      'cylinder refill',
+    ];
+
+    final List<Map<String, dynamic>> results = [];
+    final seen = <String>{};
+
+    for (final query in queries) {
+      try {
+        final response = await http
+            .post(
+              Uri.parse('https://places.googleapis.com/v1/places:searchText'),
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Goog-Api-Key': googleApiKey,
+                'X-Goog-FieldMask':
+                    'places.id,places.displayName,places.location,'
+                        'places.types,places.editorialSummary',
+              },
+              body: jsonEncode({
+                'textQuery': '$query near $lat,$lng',
+                'locationBias': {
+                  'circle': {
+                    'center': {'latitude': lat, 'longitude': lng},
+                    'radius': radius.toDouble(),
+                  },
+                },
+                'maxResultCount': 10,
+              }),
+            )
+            .timeout(const Duration(seconds: 15));
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          final places = data['places'] as List? ?? [];
+
+          for (final place in places) {
+            final parsed = _parseGooglePlace(place, 'LPG');
+            final id = parsed['id'] as String;
+
+            // ── Skip duplicates ──
+            if (!seen.contains(id)) {
+              seen.add(id);
+              results.add(parsed);
+            }
+          }
+        }
+      } catch (e) {
+        print(' LPG search error for "$query": $e');
+      }
+    }
+
+    print(' Found ${results.length} LPG stations from Google');
+    return results;
+  }
+
+// EXPANDED EV DETECTION
+
+  static bool _isEvStation(
+    List<dynamic> types,
+    String name,
+    Map<String, dynamic> place,
+  ) {
+    final lowerName = name.toLowerCase();
+
+    //Check Google types
+    const evTypes = [
+      'electric_vehicle_charging_station',
+      'ev_charging_station',
+      'charging_station',
+      'electric_vehicle_charging',
+      'ev_charging',
+      'electric_charging_point',
+    ];
+
+    if (types.any((t) => evTypes.contains(t.toString()))) {
+      return true;
+    }
+
+    // Check name for EV keywords
+    const evKeywords = [
+      'tesla',
+      'supercharger',
+      ' ev ',
+      'electric vehicle',
+      'ccs',
+      'chademo',
+      'type 2',
+      'mennekes',
+      'charging station',
+      'charger',
+      'charge point',
+      'chargepoint',
+      'electric car',
+      'ev station',
+      'ev charging',
+      'electric charging',
+      'fast charger',
+      'rapid charger',
+      'evcs',
+      'electric vehicle supply',
+      'electrify america',
+      'ionity',
+      'xcharge',
+    ];
+
+    if (evKeywords.any((k) => lowerName.contains(k))) {
+      return true;
+    }
+
+    // Check editorial summary if available
+    final description = place['editorialSummary']?['text'] as String? ?? '';
+    if (description.isNotEmpty) {
+      final lowerDesc = description.toLowerCase();
+      const descKeywords = ['ev', 'electric', 'charging', 'charger'];
+      if (descKeywords.any((k) => lowerDesc.contains(k))) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+// EXPANDED LPG DETECTION
+
+  static bool _isLpgStation(
+    List<dynamic> types,
+    String name,
+    Map<String, dynamic> place,
+  ) {
+    final lowerName = name.toLowerCase();
+
+    // Check name for LPG keywords
+    const lpgKeywords = [
+      'lpg',
+      'lp gas',
+      'liquefied petroleum',
+      'autogas',
+      'gas refill',
+      'cylinder refill',
+      'cooking gas',
+      'propane',
+      'butane',
+      'lpg station',
+      'lpg filling',
+      'lpg refill',
+      'gas filling',
+      'gas',
+      'lpg retail',
+      'lpg outlet',
+      'lpg dispensing',
+      'cylinder exchange',
+      'bottled gas',
+    ];
+
+    if (lpgKeywords.any((k) => lowerName.contains(k))) {
+      return true;
+    }
+
+    //  Check types for gas related terms
+    for (final type in types) {
+      final typeStr = type.toString().toLowerCase();
+      if (typeStr.contains('gas') && !typeStr.contains('electric')) {
+        if (lowerName.contains('gas') ||
+            lowerName.contains('lpg') ||
+            lowerName.contains('refill')) {
+          return true;
+        }
+      }
+    }
+
+    // Check editorial summary
+    final description = place['editorialSummary']?['text'] as String? ?? '';
+    if (description.isNotEmpty) {
+      final lowerDesc = description.toLowerCase();
+      const descKeywords = [
+        'lpg',
+        'gas refill',
+        'cylinder',
+        'propane',
+        'autogas'
+      ];
+      if (descKeywords.any((k) => lowerDesc.contains(k))) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+// PARSE GOOGLE PLACE
+
+  static Map<String, dynamic> _parseGooglePlace(
+    Map<String, dynamic> place,
+    String fuelType,
+  ) {
+    final lat = (place['location']?['latitude'] as num?)?.toDouble() ?? 0.0;
+    final lng = (place['location']?['longitude'] as num?)?.toDouble() ?? 0.0;
+    final name = place['displayName']?['text'] as String? ?? 'Fuel Station';
+    final placeId = place['id'] as String? ?? '';
+    final types = place['types'] as List? ?? [];
+
+    // Determine final fuel type using smart detection
+    String finalType = fuelType;
+
+    if (_isEvStation(types, name, place)) {
+      finalType = 'EV';
+    } else if (_isLpgStation(types, name, place)) {
+      finalType = 'LPG';
+    } else {
+      // Keep the original fuelType from the search
+      finalType = fuelType;
+    }
+
+    return {
+      'id': 'google_$placeId',
+      'name': name,
+      'lat': lat,
+      'lng': lng,
+      'type': finalType,
+      'isGooglePlace': true,
+      'placeId': placeId,
+    };
   }
 }

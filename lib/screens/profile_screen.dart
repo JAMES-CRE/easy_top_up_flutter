@@ -498,10 +498,10 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'auth_screen.dart';
 import 'auth_state.dart';
+import 'main_map_screen.dart';
 import 'edit_profile_screen.dart';
 import '../services/favorite_service.dart';
 import 'favorites_screen.dart';
-import 'stations_list_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -575,6 +575,21 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
           ),
         ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () {
+            if (!AuthState.instance.isLoggedIn) {
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(
+                  builder: (_) => const MainMapScreen(),
+                ),
+                (route) => false,
+              );
+            } else {
+              Navigator.pop(context);
+            }
+          },
+        ),
       ),
       body: FadeTransition(
         opacity: _fadeAnimation,
@@ -586,7 +601,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               children: [
                 const SizedBox(height: 8),
 
-                // ========== PROFILE CARD ==========
+                // PROFILE CARD
                 Container(
                   width: double.infinity,
                   decoration: BoxDecoration(
@@ -684,7 +699,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
                         const SizedBox(height: 20),
 
-                        // Login Button (if not logged in)
+                        // Login Button
                         if (!isLoggedIn)
                           SizedBox(
                             width: 180,
@@ -718,7 +733,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
                 const SizedBox(height: 28),
 
-                // ========== ACCOUNT SECTION ==========
+                //  ACCOUNT
                 _sectionLabel('Account '),
                 const SizedBox(height: 12),
 
@@ -749,13 +764,16 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 builder: (_) => const EditProfileScreen()),
                           );
                           if (updated == true && mounted) {
+                            // Refresh AuthState from SharedPreferences
+                            await AuthState.instance.refreshSession();
+
                             setState(() {});
                           }
                         },
                       ),
                       const Divider(height: 1, indent: 70, endIndent: 16),
 
-                      // ★★★ MY FAVORITES TILE (Only for logged-in users) ★★★
+                      //  MY FAVORITES TILE
                       if (isLoggedIn) ...[
                         _buildProfileTile(
                           icon: Icons.favorite,
@@ -786,28 +804,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                       ],
                       const Divider(height: 1, indent: 70, endIndent: 16),
 
-                      // My Stations (for operators)
-                      if (userRole == 'operator')
-                        Column(
-                          children: [
-                            _buildProfileTile(
-                              icon: Icons.store_outlined,
-                              title: 'My Stations',
-                              subtitle: 'Manage your stations',
-                              iconColor: Colors.blue.shade600,
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const StationsListScreen(),
-                                  ),
-                                );
-                              },
-                            ),
-                            const Divider(height: 1, indent: 70, endIndent: 16),
-                          ],
-                        ),
-
                       // Logout Tile
                       _buildProfileTile(
                         icon: Icons.logout,
@@ -821,68 +817,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                   ),
                 ),
 
-                /*const SizedBox(height: 28),
-
-                // ========== APP INFO SECTION ==========
-                _sectionLabel('About'),
-                const SizedBox(height: 12),
-
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 10,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      _buildInfoTile(
-                        icon: Icons.info_outline,
-                        title: 'App Version',
-                        value: '2.0.0',
-                        iconColor: Colors.blue.shade600,
-                      ),
-                      const Divider(height: 1, indent: 70, endIndent: 16),
-                      _buildInfoTile(
-                        icon: Icons.star_outline,
-                        title: 'Rate Us',
-                        value: '',
-                        iconColor: Colors.amber.shade700,
-                        onTap: () => _showSnackBar(
-                            context, 'Rate us feature coming soon'),
-                      ),
-                      const Divider(height: 1, indent: 70, endIndent: 16),
-                      _buildInfoTile(
-                        icon: Icons.share_outlined,
-                        title: 'Share App',
-                        value: '',
-                        iconColor: Colors.green.shade600,
-                        onTap: () =>
-                            _showSnackBar(context, 'Share feature coming soon'),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 40),
-
-                // Footer text
-                Center(
-                  child: Text(
-                    '© 2026 Easy Top Up • All rights reserved',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.grey[400],
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ),*/
-
                 const SizedBox(height: 20),
               ],
             ),
@@ -892,7 +826,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  // Section label widget
+  // Section label
   Widget _sectionLabel(String text) {
     return Align(
       alignment: Alignment.centerLeft,
@@ -908,7 +842,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  // Profile tile widget (UPDATED with optional trailing)
+  // Profile tile widget
   Widget _buildProfileTile({
     required IconData icon,
     required String title,
@@ -916,7 +850,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     required VoidCallback onTap,
     Color iconColor = Colors.black54,
     Color titleColor = Colors.black87,
-    Widget? trailing, // ← NEW: optional trailing widget
+    Widget? trailing,
   }) {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -949,46 +883,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  // Info tile widget (for app info section)
-  /* Widget _buildInfoTile({
-    required IconData icon,
-    required String title,
-    required String value,
-    required Color iconColor,
-    VoidCallback? onTap,
-  }) {
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      leading: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: iconColor.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Icon(icon, color: iconColor, size: 20),
-      ),
-      title: Text(
-        title,
-        style: TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
-          color: Colors.black87,
-        ),
-      ),
-      trailing: value.isNotEmpty
-          ? Text(
-              value,
-              style: TextStyle(
-                fontSize: 13,
-                color: Colors.grey[500],
-                fontWeight: FontWeight.w500,
-              ),
-            )
-          : Icon(Icons.arrow_forward_ios, color: Colors.grey[400], size: 14),
-      onTap: onTap,
-    );
-  }*/
-
   // Logout confirmation dialog
   void _showLogoutDialog(BuildContext context) {
     showDialog(
@@ -1003,27 +897,29 @@ class _ProfileScreenState extends State<ProfileScreen>
             child: Text('Cancel', style: TextStyle(color: Colors.grey[600])),
           ),
           TextButton(
-            onPressed: () {
-              AuthState.instance.logout();
-              setState(() {});
+            onPressed: () async {
+              // ── Step 1: Close the dialog ──
               Navigator.pop(context);
-              _showSnackBar(context, 'Logged out successfully');
+
+              // ── Step 2: Clear auth data ──
+              await AuthState.instance.logout();
+
+              // ── Step 3: Clear stack and go to onboarding ──
+              // ── After logout — stay on ProfileScreen as guest ──
+              if (!mounted) return;
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(
+                  builder: (_) => const ProfileScreen(),
+                ),
+                (route) => false,
+              );
             },
-            child: const Text('Log Out', style: TextStyle(color: Colors.red)),
+            child: const Text(
+              'Log Out',
+              style: TextStyle(color: Colors.red),
+            ),
           ),
         ],
-      ),
-    );
-  }
-
-  // Snackbar helper
-  void _showSnackBar(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        duration: const Duration(seconds: 2),
       ),
     );
   }

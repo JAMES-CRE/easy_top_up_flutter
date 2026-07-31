@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/favorite_service.dart';
 import 'api_service.dart';
-//import 'auth_state.dart';
-//import 'main_map_screen.dart'; 
 
 class FavoritesScreen extends StatefulWidget {
   const FavoritesScreen({super.key});
@@ -32,7 +30,6 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     });
 
     try {
-      // Get all favorite station IDs
       final favoriteIds = FavoriteService().getFavorites();
       
       if (favoriteIds.isEmpty) {
@@ -63,17 +60,15 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     }
   }
 
-  // Remove a station from favorites
-  void _removeFavorite(String stationId) async {
-    await FavoriteService().removeFavorite(stationId);
-    setState(() {
-      _favoriteStations.removeWhere((station) => station['id'] == stationId);
-    });
-  }
 
-  // Get distance (simplified - you can reuse your existing distance calculator)
+  void _removeFavorite(String stationId) async {
+  await FavoriteService().removeFavorite(stationId);
+  // Reload the entire list to ensure consistency
+  await _loadFavorites();
+}
+
+  // Get distance 
   String _getDistance(double stationLat, double stationLng) {
-    // This is simplified - you can import your existing distance calculator
     return '${(stationLat + stationLng).toStringAsFixed(1)} km away';
   }
 
@@ -178,9 +173,6 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
                           return InkWell(
                             onTap: () {
-                              // Open the station bottom sheet
-                              // Since _showBottomSheet is in MainMapScreen,
-                              // we need to pass the station back
                               Navigator.pop(context, station);
                             },
                             child: Padding(
@@ -219,11 +211,9 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                                       ],
                                     ),
                                   ),
-                                  // Remove favorite button (heart icon)
                                   GestureDetector(
                                     onTap: () {
                                       _removeFavorite(stationId);
-                                      // Show a quick visual feedback
                                       ScaffoldMessenger.of(context).showSnackBar(
                                         SnackBar(
                                           content: Text('Removed from favorites'),

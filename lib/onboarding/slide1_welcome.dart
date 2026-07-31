@@ -56,7 +56,7 @@ class _Slide1WelcomeState extends State<Slide1Welcome>
       ),
     );
     _iconSlide = Tween<Offset>(
-      begin: const Offset(0, -0.5), // starts above its position
+      begin: const Offset(0, -0.5), 
       end: Offset.zero,
     ).animate(
       CurvedAnimation(
@@ -183,7 +183,6 @@ class _Slide1WelcomeState extends State<Slide1Welcome>
 
               
               //APP ICON 
-              // Green circle with a gas station icon 
               FadeTransition(
                 opacity: _iconFade,
                 child: SlideTransition(
@@ -337,7 +336,7 @@ class _Slide1WelcomeState extends State<Slide1Welcome>
     );
   }
 
-  //_bulletItem 
+  //bulletItem 
   Widget _bulletItem(IconData icon, Color color, String text) {
     return Row(
       mainAxisSize: MainAxisSize.min,

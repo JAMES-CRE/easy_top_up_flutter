@@ -1,21 +1,25 @@
-
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'screens/main_map_screen.dart';
+import 'screens/operator_home_screen.dart';
+import 'screens/auth_screen.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'screens/auth_state.dart'; 
+import 'screens/auth_state.dart';
 import 'services/favorite_service.dart';
 
-void main() async {  //  CHANGE TO ASYNC
-  WidgetsFlutterBinding.ensureInitialized();  // 
-  
-  // Load saved session before running the app
-  await AuthState.instance.loadSavedSession();  // 
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
 
+  await AuthState.instance.loadSavedSession();
   await FavoriteService().init();
+  await AuthState.instance.loadFuelPrices();
 
   runApp(const EasyTopUpApp());
 }
+
+// ── Add this at the top level — outside any class ──
+final RouteObserver<ModalRoute<void>> routeObserver =
+    RouteObserver<ModalRoute<void>>();
 
 class EasyTopUpApp extends StatelessWidget {
   const EasyTopUpApp({super.key});
@@ -25,6 +29,7 @@ class EasyTopUpApp extends StatelessWidget {
     return MaterialApp(
       title: 'Easy Top Up',
       debugShowCheckedModeBanner: false,
+      navigatorObservers: [routeObserver],
       theme: ThemeData(
         primarySwatch: Colors.green,
         useMaterial3: true,
@@ -38,22 +43,63 @@ class EasyTopUpApp extends StatelessWidget {
             backgroundColor: const Color(0xFF2E7D32),
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 32),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(30),
+            ),
             textStyle:
                 const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
           ),
         ),
       ),
-      home: AuthState.instance.isLoggedIn  // ← CHANGE THIS
-          ? const MainMapScreen()
-          : const OnboardingScreen(),
+      home: const _RootRouter(),
     );
   }
 }
+// ─── ROOT ROUTER (inside main.dart) ───
+class _RootRouter extends StatefulWidget {
+  const _RootRouter();
 
-// Onboarding - 2 slides
+  @override
+  State<_RootRouter> createState() => _RootRouterState();
+}
 
+class _RootRouterState extends State<_RootRouter> {
+  @override
+  void initState() {
+    super.initState();
+    AuthState.instance.addListener(_onAuthStateChanged);
+  }
+
+  void _onAuthStateChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  @override
+  void dispose() {
+    AuthState.instance.removeListener(_onAuthStateChanged);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (AuthState.instance.isLoggedIn) {
+      if (AuthState.instance.isOperator) {
+        return const OperatorHomeScreen();
+      } else {
+        return const MainMapScreen();
+      }
+    } else {
+      return const OnboardingScreen();
+    }
+  }
+}
+
+// ─── ONBOARDING SCREEN (keep your existing code) ───
+// ... your existing OnboardingScreen, Slide1Welcome, Slide2Permission classes
+
+// ─── ONBOARDING SCREEN ───
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
 
@@ -80,7 +126,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ],
           ),
 
-          //Info button
+          // Info button
           Positioned(
             top: 50,
             left: 20,
@@ -94,13 +140,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   builder: (context) => AlertDialog(
                     title: const Text('About Easy Top Up'),
                     content: const Text(
-                        'Easy Top Up helps  people quickly locate nearby fuel stations, LPG refill points, and EV charging stations in Ghana.\n\n'
+                        'Easy Top Up helps people quickly locate nearby fuel stations, LPG refill points, and EV charging stations in Ghana.\n\n'
                         'KNUST final year project developed by:\nKyei\nJames\nFathihu'),
                     actions: [
                       TextButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                        },
+                        onPressed: () => Navigator.pop(context),
                         child: const Text('Close'),
                       )
                     ],
@@ -132,7 +176,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
           ),
 
-          //this creates the page dots on slide 1 and slide 2
+          // Page dots
           Positioned(
             bottom: 90,
             left: 0,
@@ -156,7 +200,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
           ),
 
-          // Compact centered button
+          // Bottom button
           Positioned(
             bottom: 30,
             left: 0,
@@ -175,17 +219,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       var status = await Permission.location.request();
                       if (status.isGranted || status.isLimited) {
                         Navigator.pushReplacement(
-                          // ignore: use_build_context_synchronously
                           context,
                           MaterialPageRoute(
-                              builder: (_) => const MainMapScreen()),
+                            builder: (_) => const MainMapScreen(),
+                          ),
                         );
                       } else {
-                        // ignore: use_build_context_synchronously
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                              content: Text(
-                                  'Location permission needed for best experience')),
+                            content: Text(
+                                'Location permission needed for best experience'),
+                          ),
                         );
                       }
                     }
@@ -207,7 +251,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 }
 
-// Slide 1 – Welcome screen
+// ─── SLIDE 1: WELCOME ───
 class Slide1Welcome extends StatefulWidget {
   const Slide1Welcome({super.key});
 
@@ -219,39 +263,26 @@ class _Slide1WelcomeState extends State<Slide1Welcome>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
 
-  // ICON animation
   late Animation<double> _iconFade;
   late Animation<Offset> _iconSlide;
-
-  //TITLE animation 
   late Animation<double> _titleFade;
-
-  //SUBTITLE animation 
   late Animation<double> _subtitleFade;
-
-  //BULLET animations
   late Animation<double> _bullet1Fade;
   late Animation<Offset> _bullet1Slide;
-
   late Animation<double> _bullet2Fade;
   late Animation<Offset> _bullet2Slide;
-
   late Animation<double> _bullet3Fade;
   late Animation<Offset> _bullet3Slide;
-
-  //FOOTER animation
   late Animation<double> _footerFade;
 
   @override
   void initState() {
     super.initState();
-
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 3000),
     );
 
-    // ICON
     _iconFade = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(
         parent: _controller,
@@ -259,7 +290,7 @@ class _Slide1WelcomeState extends State<Slide1Welcome>
       ),
     );
     _iconSlide = Tween<Offset>(
-      begin: const Offset(0, -0.5), // starts above its position
+      begin: const Offset(0, -0.5),
       end: Offset.zero,
     ).animate(
       CurvedAnimation(
@@ -268,7 +299,6 @@ class _Slide1WelcomeState extends State<Slide1Welcome>
       ),
     );
 
-    // TITLE 
     _titleFade = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(
         parent: _controller,
@@ -276,7 +306,6 @@ class _Slide1WelcomeState extends State<Slide1Welcome>
       ),
     );
 
-    // SUBTITLE
     _subtitleFade = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(
         parent: _controller,
@@ -284,7 +313,6 @@ class _Slide1WelcomeState extends State<Slide1Welcome>
       ),
     );
 
-    //  BULLET 1 
     _bullet1Fade = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(
         parent: _controller,
@@ -292,7 +320,7 @@ class _Slide1WelcomeState extends State<Slide1Welcome>
       ),
     );
     _bullet1Slide = Tween<Offset>(
-      begin: const Offset(0.3, 0), // slides in from right
+      begin: const Offset(0.3, 0),
       end: Offset.zero,
     ).animate(
       CurvedAnimation(
@@ -301,7 +329,6 @@ class _Slide1WelcomeState extends State<Slide1Welcome>
       ),
     );
 
-    // BULLET 2
     _bullet2Fade = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(
         parent: _controller,
@@ -318,7 +345,6 @@ class _Slide1WelcomeState extends State<Slide1Welcome>
       ),
     );
 
-    // BULLET 3 
     _bullet3Fade = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(
         parent: _controller,
@@ -335,7 +361,6 @@ class _Slide1WelcomeState extends State<Slide1Welcome>
       ),
     );
 
-    // FOOTER 
     _footerFade = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(
         parent: _controller,
@@ -355,13 +380,9 @@ class _Slide1WelcomeState extends State<Slide1Welcome>
   @override
   Widget build(BuildContext context) {
     return Container(
-      // Same green gradient as Slide2
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            Color(0xFFE8F5E9),
-            Color(0xFFC8E6C9),
-          ],
+          colors: [Color(0xFFE8F5E9), Color(0xFFC8E6C9)],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         ),
@@ -374,8 +395,6 @@ class _Slide1WelcomeState extends State<Slide1Welcome>
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               const SizedBox(height: 24),
-
-              // APP ICON 
               FadeTransition(
                 opacity: _iconFade,
                 child: SlideTransition(
@@ -388,7 +407,6 @@ class _Slide1WelcomeState extends State<Slide1Welcome>
                       color: const Color(0xFF2E7D32),
                       boxShadow: [
                         BoxShadow(
-                          // ignore: deprecated_member_use
                           color: Colors.green.withOpacity(0.35),
                           blurRadius: 20,
                           offset: const Offset(0, 8),
@@ -403,10 +421,7 @@ class _Slide1WelcomeState extends State<Slide1Welcome>
                   ),
                 ),
               ),
-
               const SizedBox(height: 32),
-
-              //TITLE 
               FadeTransition(
                 opacity: _titleFade,
                 child: Text(
@@ -422,10 +437,7 @@ class _Slide1WelcomeState extends State<Slide1Welcome>
                   ),
                 ),
               ),
-
               const SizedBox(height: 10),
-
-              //SUBTITLE
               FadeTransition(
                 opacity: _subtitleFade,
                 child: Text(
@@ -441,10 +453,7 @@ class _Slide1WelcomeState extends State<Slide1Welcome>
                   ),
                 ),
               ),
-
               const SizedBox(height: 36),
-
-              //  BULLET 1 
               FadeTransition(
                 opacity: _bullet1Fade,
                 child: SlideTransition(
@@ -456,10 +465,7 @@ class _Slide1WelcomeState extends State<Slide1Welcome>
                   ),
                 ),
               ),
-
               const SizedBox(height: 18),
-
-              // BULLET 2 
               FadeTransition(
                 opacity: _bullet2Fade,
                 child: SlideTransition(
@@ -471,10 +477,7 @@ class _Slide1WelcomeState extends State<Slide1Welcome>
                   ),
                 ),
               ),
-
               const SizedBox(height: 18),
-
-              // BULLET 3 
               FadeTransition(
                 opacity: _bullet3Fade,
                 child: SlideTransition(
@@ -486,19 +489,13 @@ class _Slide1WelcomeState extends State<Slide1Welcome>
                   ),
                 ),
               ),
-
               const SizedBox(height: 36),
-
-              // FOOTER NOTE 
               FadeTransition(
                 opacity: _footerFade,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 14,
-                  ),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   decoration: BoxDecoration(
-                    // ignore: deprecated_member_use
                     color: Colors.white.withOpacity(0.5),
                     borderRadius: BorderRadius.circular(16),
                   ),
@@ -506,14 +503,10 @@ class _Slide1WelcomeState extends State<Slide1Welcome>
                     'We need your location to show nearby stations.\nPlease enable location access.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.black54,
-                      height: 1.6,
-                    ),
+                        fontSize: 14, color: Colors.black54, height: 1.6),
                   ),
                 ),
               ),
-
               const SizedBox(height: 32),
             ],
           ),
@@ -522,7 +515,6 @@ class _Slide1WelcomeState extends State<Slide1Welcome>
     );
   }
 
-  // Exact same bulletItem as Slide2 — nothing changed
   Widget _bulletItem(IconData icon, Color color, String text) {
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -536,10 +528,7 @@ class _Slide1WelcomeState extends State<Slide1Welcome>
             color: color,
             boxShadow: const [
               BoxShadow(
-                color: Colors.black26,
-                blurRadius: 8,
-                offset: Offset(0, 3),
-              ),
+                  color: Colors.black26, blurRadius: 8, offset: Offset(0, 3)),
             ],
           ),
           child: Icon(icon, color: Colors.white, size: 26),
@@ -549,10 +538,9 @@ class _Slide1WelcomeState extends State<Slide1Welcome>
           child: Text(
             text,
             style: const TextStyle(
-              fontSize: 17,
-              color: Colors.black87,
-              fontWeight: FontWeight.w500,
-            ),
+                fontSize: 17,
+                color: Colors.black87,
+                fontWeight: FontWeight.w500),
           ),
         ),
       ],
@@ -560,6 +548,7 @@ class _Slide1WelcomeState extends State<Slide1Welcome>
   }
 }
 
+// ─── SLIDE 2: PERMISSION ───
 class Slide2Permission extends StatefulWidget {
   const Slide2Permission({super.key});
 
@@ -573,111 +562,89 @@ class _Slide2PermissionState extends State<Slide2Permission>
 
   late Animation<double> _iconFade;
   late Animation<Offset> _iconSlide;
-
   late Animation<double> _titleFade;
-
   late Animation<double> _bullet1Fade;
   late Animation<Offset> _bullet1Slide;
-
   late Animation<double> _bullet2Fade;
   late Animation<Offset> _bullet2Slide;
-
   late Animation<double> _bullet3Fade;
   late Animation<Offset> _bullet3Slide;
-
   late Animation<double> _noteFade;
 
   @override
   void initState() {
     super.initState();
-
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 3000),
     );
 
-            //Icons
     _iconFade = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.0, 0.25, curve: Curves.easeOut),
-      ),
+          parent: _controller,
+          curve: const Interval(0.0, 0.25, curve: Curves.easeOut)),
     );
     _iconSlide = Tween<Offset>(
       begin: const Offset(0, -0.5),
       end: Offset.zero,
     ).animate(
       CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.0, 0.25, curve: Curves.easeOut),
-      ),
+          parent: _controller,
+          curve: const Interval(0.0, 0.25, curve: Curves.easeOut)),
     );
 
-    // Title fades 
     _titleFade = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.20, 0.40, curve: Curves.easeOut),
-      ),
+          parent: _controller,
+          curve: const Interval(0.20, 0.40, curve: Curves.easeOut)),
     );
 
-    // Bullet 1 
     _bullet1Fade = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.38, 0.55, curve: Curves.easeOut),
-      ),
+          parent: _controller,
+          curve: const Interval(0.38, 0.55, curve: Curves.easeOut)),
     );
     _bullet1Slide = Tween<Offset>(
       begin: const Offset(0.3, 0),
       end: Offset.zero,
     ).animate(
       CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.38, 0.55, curve: Curves.easeOut),
-      ),
+          parent: _controller,
+          curve: const Interval(0.38, 0.55, curve: Curves.easeOut)),
     );
 
-    // Bullet 2 
     _bullet2Fade = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.52, 0.68, curve: Curves.easeOut),
-      ),
+          parent: _controller,
+          curve: const Interval(0.52, 0.68, curve: Curves.easeOut)),
     );
     _bullet2Slide = Tween<Offset>(
       begin: const Offset(0.3, 0),
       end: Offset.zero,
     ).animate(
       CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.52, 0.68, curve: Curves.easeOut),
-      ),
+          parent: _controller,
+          curve: const Interval(0.52, 0.68, curve: Curves.easeOut)),
     );
 
-    // Bullet 3 
     _bullet3Fade = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.65, 0.80, curve: Curves.easeOut),
-      ),
+          parent: _controller,
+          curve: const Interval(0.65, 0.80, curve: Curves.easeOut)),
     );
     _bullet3Slide = Tween<Offset>(
       begin: const Offset(0.3, 0),
       end: Offset.zero,
     ).animate(
       CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.65, 0.80, curve: Curves.easeOut),
-      ),
+          parent: _controller,
+          curve: const Interval(0.65, 0.80, curve: Curves.easeOut)),
     );
 
-    // Privacy note 
     _noteFade = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.80, 1.0, curve: Curves.easeOut),
-      ),
+          parent: _controller,
+          curve: const Interval(0.80, 1.0, curve: Curves.easeOut)),
     );
 
     _controller.forward();
@@ -694,10 +661,7 @@ class _Slide2PermissionState extends State<Slide2Permission>
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            Color(0xFFE8F5E9),
-            Color(0xFFC8E6C9),
-          ],
+          colors: [Color(0xFFE8F5E9), Color(0xFFC8E6C9)],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         ),
@@ -710,8 +674,6 @@ class _Slide2PermissionState extends State<Slide2Permission>
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               const SizedBox(height: 24),
-
-              // ── LOCATION ICON ──
               FadeTransition(
                 opacity: _iconFade,
                 child: SlideTransition(
@@ -730,18 +692,12 @@ class _Slide2PermissionState extends State<Slide2Permission>
                         ),
                       ],
                     ),
-                    child: const Icon(
-                      Icons.location_on,
-                      size: 48,
-                      color: Colors.white,
-                    ),
+                    child: const Icon(Icons.location_on,
+                        size: 48, color: Colors.white),
                   ),
                 ),
               ),
-
               const SizedBox(height: 32),
-
-              // TITLE 
               FadeTransition(
                 opacity: _titleFade,
                 child: Text(
@@ -757,10 +713,7 @@ class _Slide2PermissionState extends State<Slide2Permission>
                   ),
                 ),
               ),
-
               const SizedBox(height: 36),
-
-              // BULLET 1 
               FadeTransition(
                 opacity: _bullet1Fade,
                 child: SlideTransition(
@@ -772,10 +725,7 @@ class _Slide2PermissionState extends State<Slide2Permission>
                   ),
                 ),
               ),
-
               const SizedBox(height: 18),
-
-              // BULLET 2 
               FadeTransition(
                 opacity: _bullet2Fade,
                 child: SlideTransition(
@@ -787,10 +737,7 @@ class _Slide2PermissionState extends State<Slide2Permission>
                   ),
                 ),
               ),
-
               const SizedBox(height: 18),
-
-              //  BULLET 3
               FadeTransition(
                 opacity: _bullet3Fade,
                 child: SlideTransition(
@@ -802,19 +749,13 @@ class _Slide2PermissionState extends State<Slide2Permission>
                   ),
                 ),
               ),
-
               const SizedBox(height: 36),
-
-              // PRIVACY NOTE
               FadeTransition(
                 opacity: _noteFade,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 14,
-                  ),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   decoration: BoxDecoration(
-                    // ignore: deprecated_member_use
                     color: Colors.white.withOpacity(0.5),
                     borderRadius: BorderRadius.circular(16),
                   ),
@@ -823,14 +764,10 @@ class _Slide2PermissionState extends State<Slide2Permission>
                     'We never share your location with anyone.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.black54,
-                      height: 1.6,
-                    ),
+                        fontSize: 14, color: Colors.black54, height: 1.6),
                   ),
                 ),
               ),
-
               const SizedBox(height: 32),
             ],
           ),
@@ -852,10 +789,7 @@ class _Slide2PermissionState extends State<Slide2Permission>
             color: color,
             boxShadow: const [
               BoxShadow(
-                color: Colors.black26,
-                blurRadius: 8,
-                offset: Offset(0, 3),
-              ),
+                  color: Colors.black26, blurRadius: 8, offset: Offset(0, 3)),
             ],
           ),
           child: Icon(icon, color: Colors.white, size: 26),
@@ -865,10 +799,9 @@ class _Slide2PermissionState extends State<Slide2Permission>
           child: Text(
             text,
             style: const TextStyle(
-              fontSize: 17,
-              color: Colors.black87,
-              fontWeight: FontWeight.w500,
-            ),
+                fontSize: 17,
+                color: Colors.black87,
+                fontWeight: FontWeight.w500),
           ),
         ),
       ],
