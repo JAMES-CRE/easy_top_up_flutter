@@ -180,7 +180,6 @@ class _EditStationScreenState extends State<EditStationScreen> {
   }
 
   //HELPER FUNCTIONS
-
   void _addPetrolOctane() {
     setState(() {
       _petrolOctanes.add({'name': '', 'price': '', 'inStock': true});

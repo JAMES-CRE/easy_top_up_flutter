@@ -5,11 +5,9 @@ import 'package:image_picker/image_picker.dart';
 import 'auth_state.dart';
 
 class ApiService {
-  // BASE URL
   static const String baseUrl =
       'https://FinalProjectcom2026.pythonanywhere.com/api';
 
-  // HEADERS
   static Map<String, String> get _headers => {
         'Content-Type': 'application/json',
       };
@@ -31,7 +29,6 @@ class ApiService {
     String? businessName,
   }) async {
     try {
-      // Split name into first_name and last_name
       final nameParts = name.trim().split(' ');
       final firstName = nameParts.first;
       final lastName =
@@ -145,7 +142,7 @@ class ApiService {
           'photo_url': userData['photo_url'],
         };
       } else {
-        throw Exception('Failed to get profile');
+        throw Exception('SOMETHING MIGHT BE WRONG');
       }
     } catch (e) {
       throw Exception('$e');
@@ -198,7 +195,7 @@ class ApiService {
           return responseBody;
         }
       } else {
-        throw Exception('Failed to update profile');
+        throw Exception('SOMETHING IS WRONG');
       }
     } catch (e) {
       throw Exception('$e');
@@ -219,10 +216,10 @@ class ApiService {
         final List data = jsonDecode(response.body);
         return data.cast<Map<String, dynamic>>();
       } else {
-        throw Exception('Failed to load stations');
+        throw Exception('SOMETHING IS WRONG');
       }
     } catch (e) {
-      throw Exception('Network error: $e');
+      throw Exception('NETWORK ERROR: $e');
     }
   }
 
@@ -242,10 +239,10 @@ class ApiService {
         final List data = jsonDecode(response.body);
         return data.cast<Map<String, dynamic>>();
       } else {
-        return [];
+        throw Exception('SOMETHING IS WRONG');
       }
     } catch (e) {
-      return [];
+      throw Exception('NETWORK ERROR: $e');
     }
   }
 
@@ -280,7 +277,7 @@ class ApiService {
           .post(
             Uri.parse('$baseUrl/stations/'),
             headers: authHeaders(token),
-            body: jsonEncode(station), // Send as-is
+            body: jsonEncode(station), 
           )
           .timeout(const Duration(seconds: 10));
 
@@ -295,7 +292,7 @@ class ApiService {
     }
   }
 
-  // UPDATE STATION (Full update)
+  // UPDATE STATION 
   static Future<void> updateStation({
     required String token,
     required String stationId,
@@ -382,7 +379,7 @@ class ApiService {
     }
   }
 
-  // UPDATE POWER OUTPUT (EV only)
+  // UPDATE POWER OUTPUT 
   static Future<void> updatePowerOutput({
     required String token,
     required String stationId,
@@ -714,13 +711,12 @@ static Future<List<Map<String, dynamic>>> getStationReviews({
       // First try the real API
       final response = await http
           .get(
-            Uri.parse('https://api.ghana-api.dev/api/v1/transport/fuel-prices'),
+            Uri.parse('https://api.ghana-api.dev/api/v2/transport/fuel-prices'),
           )
           .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        // Check if we got valid data
         if (data['success'] == true && data['data']['petrol'] > 0) {
           return data;
         }
@@ -804,7 +800,6 @@ static Future<List<Map<String, dynamic>>> getStationReviews({
   }
 
 // FETCH BY TYPE
-
   static Future<List<Map<String, dynamic>>> _fetchGooglePlaces(
     double lat,
     double lng,
@@ -856,18 +851,19 @@ static Future<List<Map<String, dynamic>>> getStationReviews({
   }
 
 // FETCH LPG BY TEXT SEARCH
-
   static Future<List<Map<String, dynamic>>> _fetchLpgStations(
     double lat,
     double lng,
     int radius,
   ) async {
-    // ── Search multiple LPG-related terms ──
+    // This Search multiple LPG related terms 
     final queries = [
       'LPG gas station',
-      'cooking gas refill',
+      'cooking gas refilling station',
       'autogas station',
       'cylinder refill',
+      'Gas refilling station',
+      'LPG filling station',
     ];
 
     final List<Map<String, dynamic>> results = [];
@@ -905,7 +901,7 @@ static Future<List<Map<String, dynamic>>> getStationReviews({
             final parsed = _parseGooglePlace(place, 'LPG');
             final id = parsed['id'] as String;
 
-            // ── Skip duplicates ──
+            // Skip duplicates 
             if (!seen.contains(id)) {
               seen.add(id);
               results.add(parsed);
@@ -922,7 +918,6 @@ static Future<List<Map<String, dynamic>>> getStationReviews({
   }
 
 // EXPANDED EV DETECTION
-
   static bool _isEvStation(
     List<dynamic> types,
     String name,
@@ -979,7 +974,7 @@ static Future<List<Map<String, dynamic>>> getStationReviews({
     final description = place['editorialSummary']?['text'] as String? ?? '';
     if (description.isNotEmpty) {
       final lowerDesc = description.toLowerCase();
-      const descKeywords = ['ev', 'electric', 'charging', 'charger'];
+      const descKeywords = ['ev', 'electric', 'charging', 'charger', 'supercharger', 'tesla', 'ccs', 'chademo',];
       if (descKeywords.any((k) => lowerDesc.contains(k))) {
         return true;
       }
@@ -989,7 +984,6 @@ static Future<List<Map<String, dynamic>>> getStationReviews({
   }
 
 // EXPANDED LPG DETECTION
-
   static bool _isLpgStation(
     List<dynamic> types,
     String name,
@@ -1056,7 +1050,6 @@ static Future<List<Map<String, dynamic>>> getStationReviews({
   }
 
 // PARSE GOOGLE PLACE
-
   static Map<String, dynamic> _parseGooglePlace(
     Map<String, dynamic> place,
     String fuelType,
@@ -1075,7 +1068,6 @@ static Future<List<Map<String, dynamic>>> getStationReviews({
     } else if (_isLpgStation(types, name, place)) {
       finalType = 'LPG';
     } else {
-      // Keep the original fuelType from the search
       finalType = fuelType;
     }
 

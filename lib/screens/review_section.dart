@@ -41,7 +41,7 @@ Future<void> _loadReviews() async {
   });
 
   try {
-    // ─── Only pass token if user is logged in 
+    // Only pass token if user is logged in 
     final token = AuthState.instance.isLoggedIn 
         ? AuthState.instance.token 
         : null;
@@ -331,7 +331,7 @@ Future<void> _loadReviews() async {
                           size: 36, color: Colors.grey[300]),
                       const SizedBox(height: 8),
                       const Text(
-                        'No reviews yet. Add one!',
+                        'No reviews yet.',
                         style: TextStyle(fontSize: 13, color: Colors.grey),
                       ),
                     ],

@@ -318,7 +318,7 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
 
                   const SizedBox(height: 24),
 
-                  // ─── WHAT'S THE ISSUE ───
+                  // WHAT'S THE ISSUE 
                   Text(
                     'What\'s the issue?',
                     style: TextStyle(
@@ -378,7 +378,7 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
 
                   const SizedBox(height: 24),
 
-                  // ─── DESCRIPTION ───
+                  // DESCRIPTION
                   Text(
                     'Description',
                     style: TextStyle(
@@ -421,7 +421,7 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
 
                   const SizedBox(height: 16),
 
-                  // ─── PHOTO EVIDENCE ───
+                  //  PHOTO EVIDENCE
                   Text(
                     'Photo Evidence',
                     style: TextStyle(
@@ -523,7 +523,7 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
 
                   const SizedBox(height: 32),
 
-                  // ─── SUBMIT BUTTON ───
+                  // SUBMIT BUTTON 
                   SizedBox(
                     width: double.infinity,
                     height: 52,

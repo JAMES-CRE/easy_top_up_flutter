@@ -27,31 +27,31 @@ class MainMapScreen extends StatefulWidget {
 class _MainMapScreenState extends State<MainMapScreen> {
   static const Color _brandGreen = Color(0xFF2E7D32);
 
-  //  CAMERA POSITION
+  
   static const CameraPosition _initialPosition = CameraPosition(
-    target: LatLng(5.6037, -0.1870),
-    zoom: 11,
-  );
+  target: LatLng(6.6885, -1.6244),
+  zoom: 13,
+);
 
-  // Holds a reference to the Google Map so we can move the camera later
+  
   GoogleMapController? _mapController;
 
-  // Stores the user's current GPS position
+  
   Position? _currentPosition;
   Set<Marker> _markers = {};
   bool _isLoading = true;
   String? _errorMessage;
   List<Map<String, dynamic>> _stations = [];
-  //List<Map<String, dynamic>> _googleStations =[];
+  
 
-  //load stations from Api
+  
   Future<void> _loadStations() async {
     try {
       final myStations = await ApiService.getStations();
 
       if (!mounted) return;
 
-      //Show your stations immediately
+      
       setState(() {
         _stations = myStations;
         _markers = _buildMarkers();
@@ -71,7 +71,7 @@ class _MainMapScreenState extends State<MainMapScreen> {
         setState(() {
           _stations = [...myStations, ...googleStations];
           _markers = _buildMarkers();
-          print('✅ Total markers: ${_markers.length}');
+          print(' Total markers: ${_markers.length}');
         });
       }
     } catch (e) {
@@ -259,7 +259,7 @@ class _MainMapScreenState extends State<MainMapScreen> {
       }
     }
 
-    print('✅ Markers built: ${markers.length}');
+    print('Markers built: ${markers.length}');
     return markers;
   }
 
@@ -323,27 +323,6 @@ class _MainMapScreenState extends State<MainMapScreen> {
     }
   }
 
-  // GET STATION REPORTS
-  /*Future<List<Map<String, dynamic>>> _getStationReports(
-      String stationId) async {
-    try {
-      final token = AuthState.instance.token ?? '';
-      final response = await ApiService.getStationReports(
-        stationId: stationId,
-        token: token,
-      );
-
-      if (response is List) {
-        return response.cast<Map<String, dynamic>>();
-      } else if (response is Map) {
-        return [response.cast<String, dynamic>()];
-      }
-      return [];
-    } catch (e) {
-      print('Error loading reports: $e');
-      return [];
-    }
-  }*/
 
   // BOTTOM SHEET
   void _showBottomSheet(Map<String, dynamic> station) {
@@ -425,7 +404,7 @@ class _MainMapScreenState extends State<MainMapScreen> {
                         ],
                       ),
 
-                      // In _showBottomSheet, after the station name
+                      // 
                       if (station['source'] == 'google')
                         Padding(
                           padding: const EdgeInsets.only(left: 8),
@@ -530,7 +509,7 @@ class _MainMapScreenState extends State<MainMapScreen> {
                           station['petrol']['available'] == true)
                         _buildPetrolSection(station['petrol']),
 
-                      // DIESEL SECTION (Premium)
+                      // DIESEL SECTION 
                       if (station['type'] == 'Petrol/Diesel' &&
                           station['diesel'] != null &&
                           station['diesel']['available'] == true)
@@ -730,7 +709,7 @@ class _MainMapScreenState extends State<MainMapScreen> {
                       ),
                       const SizedBox(height: 10),
 
-                      // ─── Load and display reports count ───
+                      // Load and display reports count 
                       FutureBuilder<List<Map<String, dynamic>>>(
                         future: _getStationReports(station['id']),
                         builder: (context, snapshot) {
@@ -782,22 +761,9 @@ class _MainMapScreenState extends State<MainMapScreen> {
                               ),
                               child: Row(
                                 children: [
-                                  // ─── Icon ───
-                                  /* Container(
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: Colors.grey,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Icon(
-                                      Icons.flag_outlined,
-                                      color: Colors.orange.shade700,
-                                      size: 20,
-                                    ),
-                                  ),*/
                                   const SizedBox(width: 14),
 
-                                  // ─── Text ───
+                                  // Text 
                                   Expanded(
                                     child: Column(
                                       crossAxisAlignment:
@@ -824,28 +790,14 @@ class _MainMapScreenState extends State<MainMapScreen> {
                                     ),
                                   ),
 
-                                  // ─── Badge (if reports exist) ───
+                                  // Badge (if reports exist) 
                                   if (reportCount > 0)
                                     Container(
                                       padding: const EdgeInsets.symmetric(
                                         horizontal: 10,
                                         vertical: 4,
                                       ),
-                                      /*decoration: BoxDecoration(
-                                        color: Colors.grey,
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(
-                                          color: Colors.grey,
-                                        ),
-                                      ),
-                                      child: Text(
-                                        '$reportCount',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.black,
-                                        ),
-                                      ),*/
+                                     
                                     ),
 
                                   const SizedBox(width: 8),
@@ -960,42 +912,6 @@ class _MainMapScreenState extends State<MainMapScreen> {
                               _launchUrl(url);
                             },
                           ),
-                          /*   // ─── NAVIGATE BUTTON (UPDATED) ───
-                          ElevatedButton.icon(
-                            icon: const Icon(Icons.directions, size: 20),
-                            label: const Text('Navigate'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green[700],
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 24,
-                                vertical: 10,
-                              ),
-                              minimumSize: const Size(140, 42),
-                            ),
-                            onPressed: () {
-                              if (_currentPosition == null) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content:
-                                        Text('Current location not available'),
-                                  ),
-                                );
-                                return;
-                              }
-                              // Close bottom sheet
-                              Navigator.pop(context);
-                              // Open navigation screen
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => NavigationScreen(
-                                    station: station,
-                                    userPosition: _currentPosition!,
-                                  ),
-                                ),
-                              );
-                            },
-                          ),*/
                           ElevatedButton.icon(
                             //icon: const Icon(Icons.flag, size: 20),
                             label: const Text('Report'),
@@ -1028,7 +944,7 @@ class _MainMapScreenState extends State<MainMapScreen> {
     );
   }
 
-// ─── GET STATION REPORTS ───
+// GET STATION REPORTS 
   Future<List<Map<String, dynamic>>> _getStationReports(
       String stationId) async {
     try {
@@ -1163,7 +1079,7 @@ class _MainMapScreenState extends State<MainMapScreen> {
     );
   }
 
-  // PREMIUM DIESEL SECTION 
+  //  DIESEL SECTION 
   Widget _buildDieselSection(Map<String, dynamic> dieselData) {
     final diesels = dieselData['diesel_types'] as List?;
     if (diesels == null || diesels.isEmpty) return const SizedBox.shrink();
@@ -1280,16 +1196,7 @@ class _MainMapScreenState extends State<MainMapScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        /* Text(
-          ' LPG',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: Colors.blue.shade700,
-          ),
-        ),*/
-        //const SizedBox(height: 8),
-
+        
         // Price Card
         Container(
           padding: const EdgeInsets.all(12),

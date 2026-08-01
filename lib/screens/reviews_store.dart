@@ -1,16 +1,14 @@
 
-
 class ReviewsStore {
   ReviewsStore._();
   static final ReviewsStore instance = ReviewsStore._();
 
-  // Key = station id, Value = list of reviews
+
   final Map<String, List<Map<String, dynamic>>> _reviews = {};
 
-  // Add a review for a station
   void addReview({
     required String stationId,
-    required int stars,        // 1 to 5
+    required int stars,        
     required String comment,
     required String userName,
   }) {

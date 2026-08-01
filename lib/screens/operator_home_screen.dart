@@ -197,7 +197,7 @@ class _OperatorHomeScreenState extends State<OperatorHomeScreen> with RouteAware
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // ─── WELCOME ───
+                        // WELCOME
                         Text(
                           'Welcome, $userName',
                           style: GoogleFonts.poppins(
@@ -229,7 +229,7 @@ class _OperatorHomeScreenState extends State<OperatorHomeScreen> with RouteAware
                         ),
                         const SizedBox(height: 24),
 
-                        // ─── QUICK STATS ───
+                        // QUICK STATS 
                         Row(
                           children: [
                             Expanded(
@@ -259,7 +259,7 @@ class _OperatorHomeScreenState extends State<OperatorHomeScreen> with RouteAware
                         ),
                         const SizedBox(height: 24),
 
-                        // ─── ACTION BUTTONS ───
+                        // ACTION BUTTONS
                         Row(
                           children: [
                             Expanded(
@@ -300,7 +300,7 @@ class _OperatorHomeScreenState extends State<OperatorHomeScreen> with RouteAware
                         ),
                         const SizedBox(height: 24),
 
-                        // ─── MY STATIONS ───
+                        // MY STATIONS 
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [

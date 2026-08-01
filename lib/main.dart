@@ -17,7 +17,6 @@ void main() async {
   runApp(const EasyTopUpApp());
 }
 
-// ── Add this at the top level — outside any class ──
 final RouteObserver<ModalRoute<void>> routeObserver =
     RouteObserver<ModalRoute<void>>();
 
@@ -55,7 +54,7 @@ class EasyTopUpApp extends StatelessWidget {
     );
   }
 }
-// ─── ROOT ROUTER (inside main.dart) ───
+// ROOT ROUTER 
 class _RootRouter extends StatefulWidget {
   const _RootRouter();
 
@@ -96,10 +95,8 @@ class _RootRouterState extends State<_RootRouter> {
   }
 }
 
-// ─── ONBOARDING SCREEN (keep your existing code) ───
-// ... your existing OnboardingScreen, Slide1Welcome, Slide2Permission classes
 
-// ─── ONBOARDING SCREEN ───
+// ONBOARDING SCREEN 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
 
@@ -251,7 +248,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 }
 
-// ─── SLIDE 1: WELCOME ───
+// SLIDE 1: WELCOME 
 class Slide1Welcome extends StatefulWidget {
   const Slide1Welcome({super.key});
 
@@ -548,7 +545,7 @@ class _Slide1WelcomeState extends State<Slide1Welcome>
   }
 }
 
-// ─── SLIDE 2: PERMISSION ───
+// SLIDE 2: PERMISSION
 class Slide2Permission extends StatefulWidget {
   const Slide2Permission({super.key});
 
