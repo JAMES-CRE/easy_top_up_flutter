@@ -26,6 +26,7 @@ class _OperatorHomeScreenState extends State<OperatorHomeScreen> with RouteAware
   
   int _pendingCount = 0;
   int _totalReports = 0;
+  final Map<String, int> _reportsByStation = {};
 
   @override
   void initState() {
@@ -66,7 +67,8 @@ class _OperatorHomeScreenState extends State<OperatorHomeScreen> with RouteAware
       
       _pendingCount = stations.where((s) => s['verified'] == false).length;
       
-      int totalReports = 0;
+      int totalPendingReports = 0;
+      _reportsByStation.clear();
       for (var station in stations) {
         try {
           final reports = await ApiService.getStationReports(
@@ -74,13 +76,23 @@ class _OperatorHomeScreenState extends State<OperatorHomeScreen> with RouteAware
             token: token,
           );
           if (reports is List) {
-            totalReports += reports.length;
+            // Only count reports that are pending (not yet replied/resolved)
+            final pending = reports.where((r) {
+              if (r is Map) {
+                final status = r['status'];
+                final hasReply = r['has_reply'] == true;
+                return status == 'pending' && !hasReply;
+              }
+              return false;
+            }).length;
+            totalPendingReports += pending;
+            _reportsByStation[station['id'].toString()] = pending;
           }
         } catch (e) {
           // Ignore errors for individual station reports
         }
       }
-      _totalReports = totalReports;
+      _totalReports = totalPendingReports;
       
       setState(() {
         _stations = stations;
@@ -144,6 +156,15 @@ class _OperatorHomeScreenState extends State<OperatorHomeScreen> with RouteAware
         backgroundColor: _brandGreen,
         foregroundColor: Colors.white,
         elevation: 0,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [_brandGreen, Color(0xFF1B5E20)],
+            ),
+          ),
+        ),
         title: Text(
           'Operator Dashboard',
           style: GoogleFonts.poppins(
@@ -252,7 +273,8 @@ class _OperatorHomeScreenState extends State<OperatorHomeScreen> with RouteAware
                               child: _buildStatCard(
                                 icon: Icons.flag,
                                 value: '$_totalReports',
-                                label: 'Reports',
+                                label: 'Pending Reports',
+                                highlight: _totalReports > 0,
                               ),
                             ),
                           ],
@@ -379,6 +401,9 @@ class _OperatorHomeScreenState extends State<OperatorHomeScreen> with RouteAware
                             final status = station['status'] ?? 'Open';
                             final name = station['name'] ?? 'Unknown';
                             final type = station['type'] ?? 'Unknown';
+                            final reportCount =
+                                _reportsByStation[station['id'].toString()] ?? 0;
+                            final hasReports = reportCount > 0;
 
                             return Container(
                               margin: const EdgeInsets.only(bottom: 10),
@@ -386,10 +411,16 @@ class _OperatorHomeScreenState extends State<OperatorHomeScreen> with RouteAware
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(12),
+                                border: hasReports
+                                    ? Border.all(
+                                        color: Colors.red.shade200, width: 1.5)
+                                    : null,
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withOpacity(0.03),
-                                    blurRadius: 4,
+                                    color: hasReports
+                                        ? Colors.red.withOpacity(0.08)
+                                        : Colors.black.withOpacity(0.03),
+                                    blurRadius: hasReports ? 8 : 4,
                                     offset: const Offset(0, 1),
                                   ),
                                 ],
@@ -408,18 +439,54 @@ class _OperatorHomeScreenState extends State<OperatorHomeScreen> with RouteAware
                                 },
                                 child: Row(
                                   children: [
-                                    Container(
-                                      width: 40,
-                                      height: 40,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: _getFuelColor(type).withOpacity(0.15),
-                                      ),
-                                      child: Icon(
-                                        _getFuelIcon(type),
-                                        color: _getFuelColor(type),
-                                        size: 20,
-                                      ),
+                                    Stack(
+                                      clipBehavior: Clip.none,
+                                      children: [
+                                        Container(
+                                          width: 40,
+                                          height: 40,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            color: _getFuelColor(type)
+                                                .withOpacity(0.15),
+                                          ),
+                                          child: Icon(
+                                            _getFuelIcon(type),
+                                            color: _getFuelColor(type),
+                                            size: 20,
+                                          ),
+                                        ),
+                                        if (hasReports)
+                                          Positioned(
+                                            right: -4,
+                                            top: -4,
+                                            child: Container(
+                                              padding: const EdgeInsets.all(4),
+                                              constraints: const BoxConstraints(
+                                                minWidth: 18,
+                                                minHeight: 18,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: Colors.red,
+                                                shape: BoxShape.circle,
+                                                border: Border.all(
+                                                  color: Colors.white,
+                                                  width: 2,
+                                                ),
+                                              ),
+                                              child: Center(
+                                                child: Text(
+                                                  '$reportCount',
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                      ],
                                     ),
                                     const SizedBox(width: 12),
                                     Expanded(
@@ -452,6 +519,44 @@ class _OperatorHomeScreenState extends State<OperatorHomeScreen> with RouteAware
                                                   color: _getStatusColor(isVerified, status),
                                                 ),
                                               ),
+                                              if (hasReports) ...[
+                                                const SizedBox(width: 8),
+                                                Container(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                          horizontal: 8,
+                                                          vertical: 2),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.red.shade50,
+                                                    borderRadius:
+                                                        BorderRadius.circular(6),
+                                                    border: Border.all(
+                                                        color:
+                                                            Colors.red.shade200),
+                                                  ),
+                                                  child: Row(
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
+                                                    children: [
+                                                      Icon(Icons.flag,
+                                                          size: 10,
+                                                          color: Colors
+                                                              .red.shade600),
+                                                      const SizedBox(width: 3),
+                                                      Text(
+                                                        '$reportCount report${reportCount > 1 ? 's' : ''}',
+                                                        style: TextStyle(
+                                                          fontSize: 10,
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                          color: Colors
+                                                              .red.shade600,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ],
                                             ],
                                           ),
                                         ],
@@ -500,12 +605,17 @@ class _OperatorHomeScreenState extends State<OperatorHomeScreen> with RouteAware
     required IconData icon,
     required String value,
     required String label,
+    bool highlight = false,
   }) {
+    final accent = highlight ? Colors.red : Colors.grey.shade600;
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: highlight ? Colors.red.shade50 : Colors.white,
         borderRadius: BorderRadius.circular(12),
+        border: highlight
+            ? Border.all(color: Colors.red.shade200)
+            : null,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.04),
@@ -516,20 +626,21 @@ class _OperatorHomeScreenState extends State<OperatorHomeScreen> with RouteAware
       ),
       child: Column(
         children: [
-          Icon(icon, color: Colors.grey[600], size: 22),
+          Icon(icon, color: accent, size: 22),
           const SizedBox(height: 4),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
+              color: highlight ? Colors.red.shade700 : Colors.black87,
             ),
           ),
           Text(
             label,
             style: TextStyle(
               fontSize: 11,
-              color: Colors.grey[500],
+              color: highlight ? Colors.red.shade400 : Colors.grey[500],
             ),
           ),
         ],

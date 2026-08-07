@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'api_service.dart';
+import '../services/station_cache_service.dart';
 
 
 
@@ -114,7 +115,7 @@ Future<void> refreshSession() async {
     userRole = role;
     this.token = token;
     userPhotoUrl = photoUrl;
-    _saveSession();  // 
+    _saveSession();  
     notifyListeners();
   }
 
@@ -132,6 +133,7 @@ Future<void> refreshSession() async {
 }
 
   Future<void> logout() async {
+    await StationCacheService.clearCache();
     isLoggedIn = false;
     userName = null;
     userEmail = null;

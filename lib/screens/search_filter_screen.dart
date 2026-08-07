@@ -26,44 +26,62 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
   String _searchQuery = '';
 
   // FUEL TYPE
-  String? _selectedFuelType; // null = All
+  String? _selectedFuelType; 
 
   // PETROL GRADES
-  String? _selectedPetrolGrade; // null = Any
+  String? _selectedPetrolGrade; 
 
   // DIESEL TYPES
-  String? _selectedDieselType; // null = Any
+  String? _selectedDieselType;
 
   // LPG TYPES
-  String? _selectedLpgType; // null = Any
+  String? _selectedLpgType; 
 
   // EV CONNECTORS
-  String? _selectedEvConnector; // null = Any
+  String? _selectedEvConnector; 
 
 // EV POWER OUTPUT
-  double _powerOutputValue = 0.0; // Default: Any (0 kW = no filter)
+  double _powerOutputValue = 0.0; 
   bool _powerOutputEnabled = false;
 
   // DISTANCE SLIDER
-  double _distanceValue = 50000; // Default: Any (50km)
+  double _distanceValue = 50000;
   bool _distanceEnabled = false;
 
   // STATION STATUS
-  String? _selectedStatus; // null = Any
+  String? _selectedStatus; 
 
 // open google place
   Future<void> _openGooglePlace(Map<String, dynamic> station) async {
     final lat = station['lat'];
     final lng = station['lng'];
-
-    // Use coordinates — always works
-    final Uri url = Uri.parse(
-      'https://www.google.com/maps/search/?api=1'
-      '&query=$lat,$lng',
-    );
+    final placeId = station['placeId'] as String?;
+    final name = station['name'] as String? ?? '';
+    final Uri url;
+    if (placeId != null && placeId.isNotEmpty) {
+      url = Uri.parse(
+        'https://www.google.com/maps/search/?api=1'
+        '&query=${Uri.encodeComponent(name)}'
+        '&query_place_id=$placeId',
+      );
+    } else {
+      
+      url = Uri.parse(
+        'https://www.google.com/maps/search/?api=1'
+        '&query=$lat,$lng',
+      );
+    }
 
     if (await canLaunchUrl(url)) {
       await launchUrl(url, mode: LaunchMode.externalApplication);
+    } else {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not open Google Maps'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 
@@ -524,34 +542,52 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
     Color? color,
   }) {
     final isSelected = selectedValue == value;
+    final activeColor = color ?? _brandGreen;
     return GestureDetector(
       onTap: () {
         onSelected(isSelected ? null : value);
       },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        margin: const EdgeInsets.only(right: 8, bottom: 8),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
         decoration: BoxDecoration(
-          color: isSelected ? (_color ?? _brandGreen) : Colors.grey.shade100,
-          borderRadius: BorderRadius.circular(20),
+          color: isSelected ? activeColor : Colors.white,
+          borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: isSelected ? (_color ?? _brandGreen) : Colors.grey.shade300,
+            color: isSelected ? activeColor : Colors.grey.shade300,
             width: 1.5,
           ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: activeColor.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 13,
-            color: isSelected ? Colors.white : Colors.black87,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (isSelected) ...[
+              const Icon(Icons.check, size: 15, color: Colors.white),
+              const SizedBox(width: 5),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                color: isSelected ? Colors.white : Colors.black87,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Color? _color;
 
   @override
   Widget build(BuildContext context) {
@@ -594,8 +630,9 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
               onChanged: (value) => setState(() => _searchQuery = value),
               style: const TextStyle(fontSize: 15),
               decoration: InputDecoration(
-                hintText: 'Search by ...',
-                prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                hintText: 'Search stations, fuel, connectors...',
+                hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+                prefixIcon: const Icon(Icons.search, color: _brandGreen),
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
                         icon: const Icon(Icons.clear, color: Colors.grey),
@@ -760,7 +797,7 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
                             onSelected: (val) => setState(() {
                               _selectedDieselType = val;
                             }),
-                            color: Colors.brown.shade700,
+                            color: Colors.amber.shade700,
                           );
                         }),
                       ],
@@ -827,12 +864,12 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
                           }),
                           color: Colors.green.shade600,
                         );
-                      }).toList(),
+                      }),
                     ],
                   ),
                   const SizedBox(height: 20),
 
-                  // ── EV POWER OUTPUT SLIDER ──
+                  //  EV POWER OUTPUT SLIDER 
                   _sectionLabel('Power Output (min)'),
                   const SizedBox(height: 8),
                   Row(
@@ -1136,16 +1173,43 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
 
 Widget _buildFuelPriceChip(String label, String fuelType) {
   final price = AuthState.instance.getFormattedFuelPrice(fuelType);
+
   return Container(
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     decoration: BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(20),
       border: Border.all(color: Colors.grey.shade300),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.03),
+          blurRadius: 4,
+          offset: const Offset(0, 1),
+        ),
+      ],
     ),
-    child: Text(
-      '$label: $price',
-      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          '$label ',
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: Colors.black,
+          ),
+        ),
+        Text(
+          price,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: Colors.black,
+          ),
+        ),
+      ],
     ),
   );
 }
+
+

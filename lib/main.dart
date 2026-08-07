@@ -2,13 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'screens/main_map_screen.dart';
 import 'screens/operator_home_screen.dart';
-import 'screens/auth_screen.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'screens/auth_state.dart';
 import 'services/favorite_service.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'models/station.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  
+  // Initialize Hive 
+  await Hive.initFlutter();
+  Hive.registerAdapter(CachedStationAdapter());
+  await Hive.openBox<CachedStation>('stations');
+  await Hive.openBox('metadata');
+  await Hive.openBox('reviews');  
+  await Hive.openBox('reports');   
+
 
   await AuthState.instance.loadSavedSession();
   await FavoriteService().init();

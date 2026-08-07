@@ -245,7 +245,7 @@ class _AuthScreenState extends State<AuthScreen>
                                             Expanded(
                                               child: _buildRoleChip(
                                                   'user',
-                                                  'Fuel User',
+                                                  'Diver',
                                                   Icons.person_outline),
                                             ),
                                             const SizedBox(width: 12),
@@ -606,7 +606,7 @@ class _AuthScreenState extends State<AuthScreen>
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(_selectedRole == 'operator'
-                  ? 'Operator account created! Please wait for admin approval.'
+                  ? 'Operator account created!.'
                   : 'Account created successfully!'),
               behavior: SnackBarBehavior.floating,
               backgroundColor: _brandGreen,

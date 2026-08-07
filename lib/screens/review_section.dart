@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'api_service.dart';
 import 'auth_state.dart';
 import 'all_reviews_screen.dart';
+import '../services/station_cache_service.dart';
 
 class ReviewsSection extends StatefulWidget {
   final String stationId;
@@ -34,6 +35,37 @@ class _ReviewsSectionState extends State<ReviewsSection> {
   
 
   // LOAD REVIEWS FROM API 
+// Future<void> _loadReviews() async {
+//   setState(() {
+//     _isLoading = true;
+//     _errorMessage = null;
+//   });
+
+//   try {
+//     // Only pass token if user is logged in 
+//     final token = AuthState.instance.isLoggedIn 
+//         ? AuthState.instance.token 
+//         : null;
+
+//     final reviews = await ApiService.getStationReviews(
+//       token: token,
+//       stationId: widget.stationId,
+//     );
+
+//     setState(() {
+//       _reviews = reviews;
+//       _isLoading = false;
+//     });
+//   } catch (e) {
+//     setState(() {
+//       _errorMessage = e.toString().replaceAll('Exception: ', '');
+//       _isLoading = false;
+//     });
+//   }
+// }
+
+
+// LOAD REVIEWS WITH CACHING 
 Future<void> _loadReviews() async {
   setState(() {
     _isLoading = true;
@@ -41,25 +73,49 @@ Future<void> _loadReviews() async {
   });
 
   try {
-    // Only pass token if user is logged in 
     final token = AuthState.instance.isLoggedIn 
         ? AuthState.instance.token 
         : null;
 
-    final reviews = await ApiService.getStationReviews(
+    
+    final hasCache = await StationCacheService.hasCachedReviews(widget.stationId);
+    
+    if (hasCache) {
+      final cachedReviews = await StationCacheService.loadReviews(widget.stationId);
+      setState(() {
+        _reviews = cachedReviews;
+        _isLoading = false;
+      });
+      print(' Loaded ${cachedReviews.length} reviews from cache');
+    }
+
+    
+    final freshReviews = await ApiService.getStationReviews(
       token: token,
       stationId: widget.stationId,
     );
 
-    setState(() {
-      _reviews = reviews;
-      _isLoading = false;
-    });
+    if (freshReviews.isNotEmpty) {
+      
+      await StationCacheService.saveReviews(widget.stationId, freshReviews);
+
+      
+      setState(() {
+        _reviews = freshReviews;
+        _isLoading = false;
+      });
+      print('✅ Updated with ${freshReviews.length} fresh reviews');
+    }
+
   } catch (e) {
-    setState(() {
-      _errorMessage = e.toString().replaceAll('Exception: ', '');
-      _isLoading = false;
-    });
+    
+    if (!await StationCacheService.hasCachedReviews(widget.stationId)) {
+      setState(() {
+        _errorMessage = e.toString().replaceAll('Exception: ', '');
+        _isLoading = false;
+      });
+    }
+    print(' Error loading reviews: $e');
   }
 }
 

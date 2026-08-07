@@ -733,8 +733,11 @@ class _EditStationScreenState extends State<EditStationScreen> {
                       labelStyle: TextStyle(color: isSelected ? Colors.white : Colors.black87),
                       onSelected: (selected) {
                         setState(() {
-                          if (selected) _selectedLpgTypes.add(t);
-                          else _selectedLpgTypes.remove(t);
+                          if (selected) {
+                            _selectedLpgTypes.add(t);
+                          } else {
+                            _selectedLpgTypes.remove(t);
+                          }
                         });
                       },
                     );
@@ -787,7 +790,7 @@ class _EditStationScreenState extends State<EditStationScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   DropdownButtonFormField<String>(
-                                    value: _getConnectorValue(point),
+                                    initialValue: _getConnectorValue(point),
                                     decoration: const InputDecoration(
                                       labelText: 'Connector Type',
                                       border: OutlineInputBorder(),

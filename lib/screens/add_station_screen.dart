@@ -766,8 +766,11 @@ class _AddStationScreenState extends State<AddStationScreen> {
                       checkmarkColor: Colors.white,
                       onSelected: (selected) {
                         setState(() {
-                          if (selected) _selectedLpgTypes.add(t);
-                          else _selectedLpgTypes.remove(t);
+                          if (selected) {
+                            _selectedLpgTypes.add(t);
+                          } else {
+                            _selectedLpgTypes.remove(t);
+                          }
                         });
                       },
                     );
@@ -823,7 +826,7 @@ class _AddStationScreenState extends State<AddStationScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   DropdownButtonFormField<String>(
-                                    value: _getConnectorValue(point),
+                                    initialValue: _getConnectorValue(point),
                                     decoration: const InputDecoration(
                                       labelText: 'Connector Type',
                                       border: OutlineInputBorder(),

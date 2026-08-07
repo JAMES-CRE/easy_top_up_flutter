@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 //import 'dart:io';
 import 'auth_state.dart';
+import '../models/station.dart';
 
 class ApiService {
   static const String baseUrl =
@@ -159,10 +160,10 @@ class ApiService {
     try {
       final Map<String, dynamic> body = {};
 
-      // Get current user email from AuthState
+    
       final currentEmail = AuthState.instance.userEmail;
 
-      // Always send email (current or new)
+  
       body['email'] = email ?? currentEmail ?? '';
 
       if (name != null) {
@@ -202,7 +203,7 @@ class ApiService {
     }
   }
 
-  // GET ALL STATIONS 
+  
   static Future<List<Map<String, dynamic>>> getStations() async {
     try {
       final response = await http
@@ -239,10 +240,10 @@ class ApiService {
         final List data = jsonDecode(response.body);
         return data.cast<Map<String, dynamic>>();
       } else {
-        throw Exception('SOMETHING IS WRONG');
+        throw Exception('failed to fetch stations');
       }
     } catch (e) {
-      throw Exception('NETWORK ERROR: $e');
+      throw Exception('Network error: $e');
     }
   }
 
@@ -267,6 +268,16 @@ class ApiService {
       throw Exception('$e');
     }
   }
+
+  // GET STATIONS AS CACHED OBJECTS 
+static Future<List<CachedStation>> getCachedStations() async {
+  try {
+    final stations = await getStations();
+    return stations.map((s) => CachedStation.fromJson(s)).toList();
+  } catch (e) {
+    throw Exception('$e');
+  }
+}
 
   static Future<void> addStation({
     required String token,
@@ -458,33 +469,39 @@ static Future<void> deleteStation({
     }
   }
 
+
+
   static Future<dynamic> getStationReports({
-    required String stationId,
-    required String token,
-  }) async {
-    try {
-      final response = await http
-          .get(
-            Uri.parse('$baseUrl/reports/reports/?station=$stationId'),
-            headers: authHeaders(token),
-          )
-          .timeout(const Duration(seconds: 10));
+  required String stationId,
+  required String token,
+}) async {
+  try {
+    
+    final headers = authHeaders(token);
+    print('!!! DEBUG: Headers being sent -> $headers');
 
-      print('=== GET STATION REPORTS ===');
-      print('URL: $baseUrl/reports/?station=$stationId');
-      print('Status: ${response.statusCode}');
-      print('Response: ${response.body}');
+    final response = await http
+        .get(
+          Uri.parse('$baseUrl/reports/reports/?station=$stationId'),
+          headers: headers,
+        )
+        .timeout(const Duration(seconds: 10));
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return data;
-      } else {
-        throw Exception('Failed to fetch reports');
-      }
-    } catch (e) {
-      throw Exception('$e');
+    print('=== GET STATION REPORTS ===');
+    print('URL: $baseUrl/reports/reports/?station=$stationId');
+    print('Status: ${response.statusCode}');
+    print('Response: ${response.body}');
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data;
+    } else {
+      throw Exception('Failed to fetch reports (Status: ${response.statusCode})');
     }
+  } catch (e) {
+    throw Exception('$e');
   }
+}
 
 // REPLY TO REPORT 
   static Future<void> replyToReport({
@@ -516,7 +533,7 @@ static Future<void> deleteStation({
   }
 
 
-
+//get review
 static Future<List<Map<String, dynamic>>> getStationReviews({
   String? token,
   required String stationId,
@@ -708,7 +725,6 @@ static Future<List<Map<String, dynamic>>> getStationReviews({
 
   static Future<Map<String, dynamic>> getFuelPrices() async {
     try {
-      // First try the real API
       final response = await http
           .get(
             Uri.parse('https://api.ghana-api.dev/api/v2/transport/fuel-prices'),
@@ -747,7 +763,7 @@ static Future<List<Map<String, dynamic>>> getStationReviews({
     };
   }
 
-  // GOOGLE PLACES API - ALL FUEL TYPES
+  // GOOGLE PLACES API 
 
   static const String googleApiKey = 'AIzaSyDD6GbX4F4d6NgNk_at_d06205lzkhI9Ck';
 
@@ -816,7 +832,8 @@ static Future<List<Map<String, dynamic>>> getStationReviews({
               'X-Goog-Api-Key': googleApiKey,
               'X-Goog-FieldMask':
                   'places.id,places.displayName,places.location,'
-                      'places.types,places.editorialSummary',
+                      'places.types,places.primaryType,'
+                      'places.primaryTypeDisplayName,places.editorialSummary',
             },
             body: jsonEncode({
               'includedTypes': types,
@@ -879,7 +896,8 @@ static Future<List<Map<String, dynamic>>> getStationReviews({
                 'X-Goog-Api-Key': googleApiKey,
                 'X-Goog-FieldMask':
                     'places.id,places.displayName,places.location,'
-                        'places.types,places.editorialSummary',
+                        'places.types,places.primaryType,'
+                        'places.primaryTypeDisplayName,places.editorialSummary',
               },
               body: jsonEncode({
                 'textQuery': '$query near $lat,$lng',
@@ -898,6 +916,14 @@ static Future<List<Map<String, dynamic>>> getStationReviews({
           final places = data['places'] as List? ?? [];
 
           for (final place in places) {
+           
+            if (!_hasLpgEvidence(place)) {
+              final placeName =
+                  place['displayName']?['text'] as String? ?? '';
+              print(' Skipping non-LPG result from LPG search: $placeName');
+              continue;
+            }
+
             final parsed = _parseGooglePlace(place, 'LPG');
             final id = parsed['id'] as String;
 
@@ -970,7 +996,7 @@ static Future<List<Map<String, dynamic>>> getStationReviews({
       return true;
     }
 
-    // Check editorial summary if available
+    
     final description = place['editorialSummary']?['text'] as String? ?? '';
     if (description.isNotEmpty) {
       final lowerDesc = description.toLowerCase();
@@ -983,6 +1009,59 @@ static Future<List<Map<String, dynamic>>> getStationReviews({
     return false;
   }
 
+
+  static bool _hasLpgEvidence(Map<String, dynamic> place) {
+    final name = (place['displayName']?['text'] as String? ?? '').toLowerCase();
+    final description =
+        (place['editorialSummary']?['text'] as String? ?? '').toLowerCase();
+    final primaryType = (place['primaryType'] as String? ?? '').toLowerCase();
+
+    
+    const strongLpgTerms = [
+      'lpg',
+      'lp gas',
+      'liquefied petroleum',
+      'autogas',
+      'cooking gas',
+      'gas refill',
+      'gas refilling',
+      'cylinder refill',
+      'cylinder exchange',
+      'gas cylinder',
+      'propane',
+      'butane',
+      'gas depot',
+      'gas company',
+      'gas station',
+      ' gas ',
+      'petroleum gas'
+    ];
+
+    final hasStrongTerm = strongLpgTerms.any(
+      (t) => name.contains(t) || description.contains(t),
+    );
+
+    
+    if (primaryType == 'gas_station' && !hasStrongTerm) {
+      return false;
+    }
+
+    const forecourtTerms = [
+      'filling station',
+      'service station',
+      'petrol',
+      'diesel',
+      'fuel station',
+    ];
+    final looksLikeForecourt =
+        forecourtTerms.any((t) => name.contains(t));
+    if (looksLikeForecourt && !hasStrongTerm) {
+      return false;
+    }
+
+    return hasStrongTerm;
+  }
+
 // EXPANDED LPG DETECTION
   static bool _isLpgStation(
     List<dynamic> types,
@@ -991,55 +1070,49 @@ static Future<List<Map<String, dynamic>>> getStationReviews({
   ) {
     final lowerName = name.toLowerCase();
 
-    // Check name for LPG keywords
+    
     const lpgKeywords = [
       'lpg',
       'lp gas',
       'liquefied petroleum',
       'autogas',
       'gas refill',
+      'gas refilling',
       'cylinder refill',
+      'cylinder exchange',
       'cooking gas',
       'propane',
       'butane',
       'lpg station',
       'lpg filling',
       'lpg refill',
-      'gas filling',
-      'gas',
       'lpg retail',
       'lpg outlet',
       'lpg dispensing',
-      'cylinder exchange',
-      'bottled gas',
+      'gas station',
+      ' gas ',
+      'petroleum gas',
     ];
 
     if (lpgKeywords.any((k) => lowerName.contains(k))) {
       return true;
     }
 
-    //  Check types for gas related terms
-    for (final type in types) {
-      final typeStr = type.toString().toLowerCase();
-      if (typeStr.contains('gas') && !typeStr.contains('electric')) {
-        if (lowerName.contains('gas') ||
-            lowerName.contains('lpg') ||
-            lowerName.contains('refill')) {
-          return true;
-        }
-      }
-    }
-
-    // Check editorial summary
+    
     final description = place['editorialSummary']?['text'] as String? ?? '';
     if (description.isNotEmpty) {
       final lowerDesc = description.toLowerCase();
       const descKeywords = [
         'lpg',
         'gas refill',
+        'gas refilling',
         'cylinder',
         'propane',
-        'autogas'
+        'autogas',
+        'cooking gas',
+        'gas station',
+        ' gas ',
+        'petroleum gas',
       ];
       if (descKeywords.any((k) => lowerDesc.contains(k))) {
         return true;
@@ -1059,13 +1132,37 @@ static Future<List<Map<String, dynamic>>> getStationReviews({
     final name = place['displayName']?['text'] as String? ?? 'Fuel Station';
     final placeId = place['id'] as String? ?? '';
     final types = place['types'] as List? ?? [];
+    final primaryType = (place['primaryType'] as String? ?? '').toLowerCase();
 
-    // Determine final fuel type using smart detection
     String finalType = fuelType;
 
+    // EV detection has highest priority
     if (_isEvStation(types, name, place)) {
       finalType = 'EV';
-    } else if (_isLpgStation(types, name, place)) {
+    }
+    // Google's own primaryType is the strongest signal: a gas_station is
+    // Petrol/Diesel even if its name contains a stray 'gas' token.
+    else if (primaryType == 'gas_station') {
+      final lowerName = name.toLowerCase();
+      final isLpgOnly = (lowerName.contains('lpg') ||
+              lowerName.contains('autogas') ||
+              lowerName.contains('cooking gas') ||
+              lowerName.contains('gas station') ||
+              lowerName.contains(' gas ') ||
+              lowerName.contains('cylinder')) &&
+          !lowerName.contains('petrol') &&
+          !lowerName.contains('diesel') &&
+          !lowerName.contains('fuel');
+      finalType = isLpgOnly ? 'LPG' : 'Petrol/Diesel';
+    }
+    // A result from the LPG bucket is only LPG if it has real LPG evidence.
+    // Otherwise it's a forecourt the text search pulled in by relevance, so
+    // fall back to Petrol/Diesel rather than defaulting to LPG.
+    else if (fuelType == 'LPG') {
+      finalType = _isLpgStation(types, name, place) ? 'LPG' : 'Petrol/Diesel';
+    }
+    // Any other bucket: only switch to LPG with strong LPG-specific evidence
+    else if (_isLpgStation(types, name, place)) {
       finalType = 'LPG';
     } else {
       finalType = fuelType;

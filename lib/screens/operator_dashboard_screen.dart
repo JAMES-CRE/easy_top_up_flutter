@@ -20,6 +20,7 @@ class OperatorDashboardScreen extends StatefulWidget {
 
 class _OperatorDashboardScreenState extends State<OperatorDashboardScreen> {
   static const Color _brandGreen = Color(0xFF2E7D32);
+  static const Color _brandGreenDark = Color(0xFF1B5E20);
 
   Map<String, dynamic>? _station;
   bool _isLoading = false;
@@ -110,7 +111,7 @@ class _OperatorDashboardScreenState extends State<OperatorDashboardScreen> {
             'DIESEL',
             style: TextStyle(
               fontWeight: FontWeight.w600,
-              color: Colors.brown,
+              color: Colors.amber,
               fontSize: 13,
             ),
           ),
@@ -157,29 +158,60 @@ class _OperatorDashboardScreenState extends State<OperatorDashboardScreen> {
     required String price,
     required bool inStock,
   }) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 8, bottom: 4),
+    return Container(
+      margin: const EdgeInsets.only(left: 8, top: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(fontSize: 14)),
-          Row(
-            children: [
-              Text(
-                price,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  color: Colors.green,
-                  fontSize: 14,
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          Text(
+            price,
+            style: const TextStyle(
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF2E7D32),
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: (inStock ? Colors.green : Colors.red).withOpacity(0.12),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  inStock ? Icons.check_circle : Icons.cancel,
+                  size: 12,
+                  color: inStock ? Colors.green : Colors.red,
                 ),
-              ),
-              const SizedBox(width: 8),
-              Icon(
-                inStock ? Icons.check_circle : Icons.cancel,
-                size: 16,
-                color: inStock ? Colors.green : Colors.red,
-              ),
-            ],
+                const SizedBox(width: 3),
+                Text(
+                  inStock ? 'In stock' : 'Out',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: inStock ? Colors.green : Colors.red,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -224,53 +256,85 @@ class _OperatorDashboardScreenState extends State<OperatorDashboardScreen> {
           ),
         ),
         const SizedBox(height: 8),
-        ...chargingPoints.map((point) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '${point['connector'] ?? 'N/A'}',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w500,
-                          fontSize: 14,
+        ...chargingPoints.map((point) {
+          final available = point['available'] == true;
+          return Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.grey.shade200),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(Icons.ev_station,
+                          size: 18, color: Colors.green.shade600),
+                    ),
+                    const SizedBox(width: 10),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${point['connector'] ?? 'N/A'}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
                         ),
-                      ),
-                      Text(
-                        '${point['power_kw'] ?? 0} kW',
-                        style:
-                            const TextStyle(fontSize: 12, color: Colors.grey),
-                      ),
-                    ],
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        'GH₵ ${point['price_per_kwh'] ?? 0}/kWh',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          color: Colors.green,
-                          fontSize: 14,
+                        Text(
+                          '${point['power_kw'] ?? 0} kW',
+                          style: const TextStyle(
+                              fontSize: 12, color: Colors.grey),
                         ),
+                      ],
+                    ),
+                  ],
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      'GH₵ ${point['price_per_kwh'] ?? 0}/kWh',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF2E7D32),
+                        fontSize: 14,
                       ),
-                      Text(
-                        point['available'] == true ? 'Available' : 'Busy',
+                    ),
+                    const SizedBox(height: 2),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: (available ? Colors.green : Colors.red)
+                            .withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        available ? 'Available' : 'Busy',
                         style: TextStyle(
-                          fontSize: 12,
-                          color: point['available'] == true
-                              ? Colors.green
-                              : Colors.red,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: available ? Colors.green : Colors.red,
                         ),
                       ),
-                    ],
-                  ),
-                ],
-              ),
-            )),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
+        }),
       ],
     );
   }
@@ -289,12 +353,27 @@ class _OperatorDashboardScreenState extends State<OperatorDashboardScreen> {
           ),
         ),
         const SizedBox(height: 8),
-        Text(
-          station['price'] ?? 'Not set',
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: Colors.green,
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.blue.shade50,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.blue.shade100),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.local_fire_department,
+                  color: Colors.blue.shade600, size: 22),
+              const SizedBox(width: 10),
+              Text(
+                station['price'] ?? 'Not set',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF2E7D32),
+                ),
+              ),
+            ],
           ),
         ),
         if (station['lpg_type'] != null &&
@@ -591,6 +670,15 @@ class _OperatorDashboardScreenState extends State<OperatorDashboardScreen> {
         backgroundColor: _brandGreen,
         foregroundColor: Colors.white,
         elevation: 0,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [_brandGreen, _brandGreenDark],
+            ),
+          ),
+        ),
         title: Text(
           'My Station',
           style: GoogleFonts.poppins(
@@ -642,18 +730,42 @@ class _OperatorDashboardScreenState extends State<OperatorDashboardScreen> {
       padding: const EdgeInsets.all(14),
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: Colors.orange.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.orange.shade300),
+        gradient: LinearGradient(
+          colors: [Colors.orange.shade50, Colors.amber.shade50],
+        ),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.orange.shade200),
       ),
       child: Row(
         children: [
-          Icon(Icons.hourglass_top, color: Colors.orange.shade700, size: 20),
-          const SizedBox(width: 10),
-          const Expanded(
-            child: Text(
-              'Your station is pending approval. It will appear on the map once approved.',
-              style: TextStyle(fontSize: 13, color: Colors.black87),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.orange.shade100,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(Icons.hourglass_top,
+                color: Colors.orange.shade800, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Pending Approval',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.orange.shade900,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                const Text(
+                  'Your station will appear on the map once approved.',
+                  style: TextStyle(fontSize: 12, color: Colors.black87),
+                ),
+              ],
             ),
           ),
         ],
@@ -666,94 +778,148 @@ class _OperatorDashboardScreenState extends State<OperatorDashboardScreen> {
     final stationType = _station!['type'] ?? 'Unknown';
     final stationStatus = _station!['status'] ?? 'Unknown';
     final isOpen = stationStatus == 'Open' || stationStatus == 'Available';
+    final fuelColor = _fuelColor(stationType);
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
           BoxShadow(
-            color: Colors.black12,
-            blurRadius: 8,
-            offset: Offset(0, 2),
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: _fuelColor(stationType).withOpacity(0.15),
-                ),
-                child: Icon(
-                  _fuelIcon(stationType),
-                  color: _fuelColor(stationType),
-                  size: 24,
-                ),
+          // Header with subtle gradient tinted by fuel color
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      stationName,
-                      style: GoogleFonts.poppins(
-                        textStyle: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  fuelColor.withOpacity(0.10),
+                  fuelColor.withOpacity(0.02),
+                ],
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 54,
+                  height: 54,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: fuelColor.withOpacity(0.15),
+                    border: Border.all(
+                      color: fuelColor.withOpacity(0.25),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Icon(
+                    _fuelIcon(stationType),
+                    color: fuelColor,
+                    size: 26,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        stationName,
+                        style: GoogleFonts.poppins(
+                          textStyle: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
                         ),
                       ),
-                    ),
-                    Text(
-                      stationType,
-                      style: const TextStyle(fontSize: 13, color: Colors.grey),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: isOpen
-                      ? Colors.green.withOpacity(0.12)
-                      : Colors.red.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.circle,
-                      size: 8,
-                      color: isOpen ? Colors.green : Colors.red,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      stationStatus,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: isOpen ? Colors.green : Colors.red,
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          Icon(_fuelIcon(stationType),
+                              size: 13, color: Colors.grey.shade500),
+                          const SizedBox(width: 4),
+                          Text(
+                            stationType,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
+                _buildStatusPill(stationStatus, isOpen),
+              ],
+            ),
           ),
-          const Divider(height: 28),
-          _buildFuelPricesSection(_station!),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Divider(height: 20),
+                _buildFuelPricesSection(_station!),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusPill(String status, bool isOpen) {
+    final color = isOpen ? Colors.green : Colors.red;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: color,
+              boxShadow: [
+                BoxShadow(
+                  color: color.withOpacity(0.5),
+                  blurRadius: 4,
+                  spreadRadius: 1,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            status,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
         ],
       ),
     );
@@ -938,30 +1104,49 @@ class _OperatorDashboardScreenState extends State<OperatorDashboardScreen> {
     required VoidCallback onTap,
     Color titleColor = Colors.black87,
   }) {
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-      leading: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: iconColor.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(8),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: iconColor.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: iconColor, size: 20),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: titleColor,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right, color: Colors.grey.shade400, size: 20),
+            ],
+          ),
         ),
-        child: Icon(icon, color: iconColor, size: 20),
       ),
-      title: Text(
-        title,
-        style: TextStyle(
-          fontSize: 15,
-          fontWeight: FontWeight.w500,
-          color: titleColor,
-        ),
-      ),
-      subtitle: Text(
-        subtitle,
-        style: const TextStyle(fontSize: 12, color: Colors.grey),
-      ),
-      trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
-      onTap: onTap,
     );
   }
 

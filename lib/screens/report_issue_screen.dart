@@ -432,7 +432,7 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Optional — helps us verify the issue faster',
+                    'Optional, helps us verify the issue faster',
                     style: TextStyle(
                       fontSize: 13,
                       color: Colors.grey[500],
