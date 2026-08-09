@@ -176,6 +176,18 @@ static Future<List<Map<String, dynamic>>> loadReports(
     }
   }
 
+  // Invalidate cached reports for a single station so the next load fetches fresh data.
+  static Future<void> clearReports(String stationId) async {
+    try {
+      final box = await Hive.openBox(_reportsBox);
+      await box.delete(stationId);
+      print(' Cleared cached reports for station $stationId');
+    } catch (e) {
+      print(' Error clearing reports: $e');
+    }
+  }
+
+
   //  METADATA 
   static Future<String?> getLastUpdated() async {
     try {

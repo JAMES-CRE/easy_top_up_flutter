@@ -26,7 +26,13 @@ class _StationReportsScreenState extends State<StationReportsScreen> {
   String? _errorMessage;
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final FocusNode _inputFocusNode = FocusNode();
   bool _isSending = false;
+
+  // The specific report the operator is currently replying to. When null,
+  // no report is selected and the reply input bar stays hidden. This is what
+  // enables replying in any order instead of a fixed FIFO queue.
+  Map<String, dynamic>? _replyingTo;
 
   @override
   void initState() {
@@ -38,6 +44,7 @@ class _StationReportsScreenState extends State<StationReportsScreen> {
   void dispose() {
     _messageController.dispose();
     _scrollController.dispose();
+    _inputFocusNode.dispose();
     super.dispose();
   }
 
@@ -181,16 +188,14 @@ class _StationReportsScreenState extends State<StationReportsScreen> {
 
     final messageText = _messageController.text.trim();
     
-    // Find the first unresolved report
-    final unresolvedReport = _reports.firstWhere(
-      (r) => !r['has_reply'] && r['status'] == 'pending',
-      orElse: () => _reports.isNotEmpty ? _reports.last : {},
-    );
+    // Reply to the specific report the operator selected (via swipe or the
+    // inline Reply button) instead of always answering the oldest pending one.
+    final targetReport = _replyingTo;
 
-    if (unresolvedReport.isEmpty) {
+    if (targetReport == null || targetReport.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('No reports to reply to'),
+          content: Text('Swipe or tap a report to reply to it'),
           behavior: SnackBarBehavior.floating,
           backgroundColor: Colors.orange,
         ),
@@ -207,12 +212,13 @@ class _StationReportsScreenState extends State<StationReportsScreen> {
       final token = AuthState.instance.token ?? '';
       await ApiService.replyToReport(
         token: token,
-        reportId: unresolvedReport['id'].toString(),
+        reportId: targetReport['id'].toString(),
         reply: messageText,
       );
 
       if (!mounted) return;
       
+      setState(() => _replyingTo = null);
       await _loadReports();
       
       ScaffoldMessenger.of(context).showSnackBar(
@@ -253,6 +259,19 @@ class _StationReportsScreenState extends State<StationReportsScreen> {
     }
   }
 
+  void _startReply(Map<String, dynamic> report) {
+    setState(() => _replyingTo = report);
+    // Bring up the keyboard right away so the operator can start typing.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _inputFocusNode.requestFocus();
+    });
+  }
+
+  void _cancelReply() {
+    setState(() => _replyingTo = null);
+    _inputFocusNode.unfocus();
+  }
+
   Widget _buildChatBubble(Map<String, dynamic> report) {
     final userName = report['user_name'] ?? 'Anonymous';
     final notes = report['notes'] ?? '';
@@ -262,8 +281,13 @@ class _StationReportsScreenState extends State<StationReportsScreen> {
     final operatorReply = report['operator_reply'] ?? '';
     final repliedByName = report['replied_by_name'] ?? 'Operator';
     final photoUrl = report['photo_url'] as String?;
+    final isOperator = AuthState.instance.isOperator;
+    final canReply =
+        isOperator && !hasReply && report['status'] == 'pending';
+    final isSelected = _replyingTo != null &&
+        _replyingTo!['id'].toString() == report['id'].toString();
 
-    return Column(
+    final bubble = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // User's report message (left-aligned)
@@ -527,267 +551,60 @@ class _StationReportsScreenState extends State<StationReportsScreen> {
         const SizedBox(height: 16),
       ],
     );
+
+    // Replied reports (and the driver's own view) are not actionable, so
+    // return the plain bubble without any swipe/reply affordances.
+    if (!canReply) return bubble;
+
+    return _SwipeToReply(
+      onReply: () => _startReply(report),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 4),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? _brandGreen.withOpacity(0.06)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          border: isSelected
+              ? Border.all(color: _brandGreen.withOpacity(0.35))
+              : null,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            bubble,
+            Padding(
+              padding: const EdgeInsets.only(left: 48, right: 8, bottom: 8),
+              child: Row(
+                children: [
+                  TextButton.icon(
+                    onPressed: () => _startReply(report),
+                    icon: const Icon(Icons.reply, size: 16),
+                    label: Text(isSelected ? 'Replying…' : 'Reply'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: _brandGreen,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      minimumSize: const Size(0, 32),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(Icons.swipe, size: 13, color: Colors.grey[400]),
+                  const SizedBox(width: 3),
+                  Text(
+                    'swipe to reply',
+                    style: TextStyle(fontSize: 11, color: Colors.grey[400]),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
-  // @override
-  // Widget build(BuildContext context) {
-  //   final isOperator = AuthState.instance.isOperator;
-  //   final hasUnrepliedReports = _reports.any((r) => !r['has_reply'] && r['status'] == 'pending');
 
-  //   return Scaffold(
-  //     backgroundColor: const Color(0xFFF5F6F8),
-  //     appBar: AppBar(
-  //       backgroundColor: _brandGreen,
-  //       foregroundColor: Colors.white,
-  //       elevation: 0,
-  //       titleSpacing: 0,
-  //       title: Row(
-  //         children: [
-  //           Container(
-  //             width: 38,
-  //             height: 38,
-  //             decoration: BoxDecoration(
-  //               color: Colors.white.withOpacity(0.15),
-  //               shape: BoxShape.circle,
-  //             ),
-  //             child: const Icon(Icons.local_gas_station, color: Colors.white, size: 20),
-  //           ),
-  //           const SizedBox(width: 10),
-  //           Expanded(
-  //             child: Column(
-  //               crossAxisAlignment: CrossAxisAlignment.start,
-  //               mainAxisSize: MainAxisSize.min,
-  //               children: [
-  //                 Text(
-  //                   widget.stationName,
-  //                   overflow: TextOverflow.ellipsis,
-  //                   style: GoogleFonts.poppins(
-  //                     textStyle: const TextStyle(
-  //                       fontSize: 16,
-  //                       fontWeight: FontWeight.w600,
-  //                       color: Colors.white,
-  //                     ),
-  //                   ),
-  //                 ),
-  //                 Text(
-  //                   '${_reports.length} ${_reports.length == 1 ? 'report' : 'reports'}',
-  //                   style: const TextStyle(
-  //                     fontSize: 12,
-  //                     color: Colors.white70,
-  //                     fontWeight: FontWeight.normal,
-  //                   ),
-  //                 ),
-  //               ],
-  //             ),
-  //           ),
-  //         ],
-  //       ),
-  //       actions: [
-  //         IconButton(
-  //           icon: const Icon(Icons.refresh),
-  //           onPressed: _loadReports,
-  //           tooltip: 'Refresh',
-  //         ),
-  //         IconButton(
-  //           icon: const Icon(Icons.close),
-  //           onPressed: () => Navigator.pop(context),
-  //         ),
-  //       ],
-  //     ),
-  //     body: _isLoading
-  //         ? const Center(child: CircularProgressIndicator(color: _brandGreen))
-  //         : _errorMessage != null
-  //             ? Center(
-  //                 child: Column(
-  //                   mainAxisAlignment: MainAxisAlignment.center,
-  //                   children: [
-  //                     const Icon(Icons.error_outline, size: 48, color: Colors.grey),
-  //                     const SizedBox(height: 16),
-  //                     Text(_errorMessage!),
-  //                     const SizedBox(height: 16),
-  //                     ElevatedButton(
-  //                       onPressed: _loadReports,
-  //                       style: ElevatedButton.styleFrom(
-  //                         backgroundColor: _brandGreen,
-  //                         foregroundColor: Colors.white,
-  //                       ),
-  //                       child: const Text('Retry'),
-  //                     ),
-  //                   ],
-  //                 ),
-  //               )
-  //             : Column(
-  //                 children: [
-  //                   // Chat messages area
-  //                   Expanded(
-  //                     child: _reports.isEmpty
-  //                         ? Center(
-  //                             child: Column(
-  //                               mainAxisAlignment: MainAxisAlignment.center,
-  //                               children: [
-  //                                 Container(
-  //                                   padding: const EdgeInsets.all(24),
-  //                                   decoration: BoxDecoration(
-  //                                     color: Colors.white,
-  //                                     shape: BoxShape.circle,
-  //                                     boxShadow: [
-  //                                       BoxShadow(
-  //                                         color: Colors.black.withOpacity(0.04),
-  //                                         blurRadius: 12,
-  //                                       ),
-  //                                     ],
-  //                                   ),
-  //                                   child: Icon(Icons.chat_bubble_outline,
-  //                                     size: 56,
-  //                                     color: Colors.grey[300],
-  //                                   ),
-  //                                 ),
-  //                                 const SizedBox(height: 20),
-  //                                 Text(
-  //                                   'No reports yet',
-  //                                   style: GoogleFonts.poppins(
-  //                                     textStyle: TextStyle(
-  //                                       fontSize: 18,
-  //                                       fontWeight: FontWeight.w600,
-  //                                       color: Colors.grey[500],
-  //                                     ),
-  //                                   ),
-  //                                 ),
-  //                                 const SizedBox(height: 8),
-  //                                 Text(
-  //                                   'Reports will appear here as conversations',
-  //                                   style: TextStyle(
-  //                                     fontSize: 14,
-  //                                     color: Colors.grey[400],
-  //                                   ),
-  //                                 ),
-  //                               ],
-  //                             ),
-  //                           )
-  //                         : RefreshIndicator(
-  //                             onRefresh: _loadReports,
-  //                             child: ListView.builder(
-  //                               controller: _scrollController,
-  //                               padding: const EdgeInsets.all(16),
-  //                               itemCount: _reports.length,
-  //                               itemBuilder: (context, index) {
-  //                                 return _buildChatBubble(_reports[index]);
-  //                               },
-  //                             ),
-  //                           ),
-  //                   ),
-
-  //                   // Message input area (only for operators with unreplied reports)
-  //                   if (isOperator && hasUnrepliedReports)
-  //                     Container(
-  //                       decoration: BoxDecoration(
-  //                         color: Colors.white,
-  //                         border: Border(
-  //                           top: BorderSide(color: Colors.grey.shade200),
-  //                         ),
-  //                         boxShadow: [
-  //                           BoxShadow(
-  //                             color: Colors.black.withOpacity(0.05),
-  //                             blurRadius: 10,
-  //                             offset: const Offset(0, -2),
-  //                           ),
-  //                         ],
-  //                       ),
-  //                       padding: EdgeInsets.only(
-  //                         left: 16,
-  //                         right: 16,
-  //                         top: 12,
-  //                         bottom: MediaQuery.of(context).viewInsets.bottom + 12,
-  //                       ),
-  //                       child: Row(
-  //                         children: [
-  //                           Expanded(
-  //                             child: TextField(
-  //                               controller: _messageController,
-  //                               enabled: !_isSending,
-  //                               maxLines: null,
-  //                               textCapitalization: TextCapitalization.sentences,
-  //                               decoration: InputDecoration(
-  //                                 hintText: 'Type your reply...',
-  //                                 hintStyle: TextStyle(color: Colors.grey[400]),
-  //                                 filled: true,
-  //                                 fillColor: Colors.grey[100],
-  //                                 border: OutlineInputBorder(
-  //                                   borderRadius: BorderRadius.circular(24),
-  //                                   borderSide: BorderSide.none,
-  //                                 ),
-  //                                 contentPadding: const EdgeInsets.symmetric(
-  //                                   horizontal: 20,
-  //                                   vertical: 12,
-  //                                 ),
-  //                               ),
-  //                             ),
-  //                           ),
-  //                           const SizedBox(width: 12),
-  //                           Container(
-  //                             decoration: BoxDecoration(
-  //                               color: _brandGreen,
-  //                               shape: BoxShape.circle,
-  //                               boxShadow: [
-  //                                 BoxShadow(
-  //                                   color: _brandGreen.withOpacity(0.3),
-  //                                   blurRadius: 8,
-  //                                   offset: const Offset(0, 2),
-  //                                 ),
-  //                               ],
-  //                             ),
-  //                             child: IconButton(
-  //                               icon: _isSending
-  //                                   ? const SizedBox(
-  //                                       width: 20,
-  //                                       height: 20,
-  //                                       child: CircularProgressIndicator(
-  //                                         strokeWidth: 2,
-  //                                         color: Colors.white,
-  //                                       ),
-  //                                     )
-  //                                   : const Icon(Icons.send_rounded, color: Colors.white),
-  //                               onPressed: _isSending ? null : _sendMessage,
-  //                             ),
-  //                           ),
-  //                         ],
-  //                       ),
-  //                     ),
-
-  //                   // Info message when all reports are replied
-  //                   if (isOperator && !hasUnrepliedReports && _reports.isNotEmpty)
-  //                     Container(
-  //                       padding: const EdgeInsets.all(16),
-  //                       decoration: BoxDecoration(
-  //                         color: Colors.green.shade50,
-  //                         border: Border(
-  //                           top: BorderSide(color: Colors.green.shade200),
-  //                         ),
-  //                       ),
-  //                       child: Row(
-  //                         children: [
-  //                           Icon(Icons.check_circle, 
-  //                             color: Colors.green.shade700, 
-  //                             size: 20
-  //                           ),
-  //                           const SizedBox(width: 12),
-  //                           Expanded(
-  //                             child: Text(
-  //                               'All reports have been addressed',
-  //                               style: TextStyle(
-  //                                 color: Colors.green.shade700,
-  //                                 fontSize: 14,
-  //                                 fontWeight: FontWeight.w500,
-  //                               ),
-  //                             ),
-  //                           ),
-  //                         ],
-  //                       ),
-  //                     ),
-  //                 ],
-  //               ),
-  //   );
-  // }
 
   @override
 Widget build(BuildContext context) {
@@ -843,11 +660,11 @@ Widget build(BuildContext context) {
         ],
       ),
       actions: [
-        IconButton(
-          icon: const Icon(Icons.refresh),
-          onPressed: _loadReports,
-          tooltip: 'Refresh',
-        ),
+        //IconButton(
+          //icon: const Icon(Icons.refresh),
+         // onPressed: _loadReports,
+          //tooltip: 'Refresh',
+        //),
         IconButton(
           icon: const Icon(Icons.close),
           onPressed: () => Navigator.pop(context),
@@ -880,7 +697,7 @@ Widget build(BuildContext context) {
                 builder: (context, constraints) {
                   return Column(
                     children: [
-                      // ─── CHAT MESSAGES AREA ───
+                      // CHAT MESSAGES AREA 
                       Expanded(
                         child: _reports.isEmpty
                             ? Center(
@@ -939,8 +756,38 @@ Widget build(BuildContext context) {
                               ),
                       ),
 
-                      // ─── MESSAGE INPUT AREA ───
-                      if (isOperator && hasUnrepliedReports)
+                      
+                      if (isOperator && hasUnrepliedReports && _replyingTo == null)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.shade50,
+                            border: Border(
+                              top: BorderSide(color: Colors.blue.shade100),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.swipe,
+                                  color: Colors.blue.shade600, size: 20),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  'Swipe or tap "Reply" on any report to respond — in any order.',
+                                  style: TextStyle(
+                                    color: Colors.blue.shade700,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                      // 
+                      if (isOperator && _replyingTo != null)
                         Container(
                           decoration: BoxDecoration(
                             color: Colors.white,
@@ -958,65 +805,133 @@ Widget build(BuildContext context) {
                           padding: EdgeInsets.only(
                             left: 16,
                             right: 16,
-                            top: 12,
+                            top: 10,
                             bottom: MediaQuery.of(context).viewInsets.bottom + 12,
                           ),
-                          child: Row(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              Expanded(
-                                child: TextField(
-                                  controller: _messageController,
-                                  enabled: !_isSending,
-                                  maxLines: null,
-                                  textCapitalization: TextCapitalization.sentences,
-                                  decoration: InputDecoration(
-                                    hintText: 'Type your reply...',
-                                    hintStyle: TextStyle(color: Colors.grey[400]),
-                                    filled: true,
-                                    fillColor: Colors.grey[100],
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(24),
-                                      borderSide: BorderSide.none,
-                                    ),
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 20,
-                                      vertical: 12,
-                                    ),
+                              // "Replying to" preview banner with cancel.
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: _brandGreen.withOpacity(0.06),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: const Border(
+                                    left: BorderSide(
+                                        color: _brandGreen, width: 3),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(width: 12),
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: _brandGreen,
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: _brandGreen.withOpacity(0.3),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 2),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.reply,
+                                        size: 16, color: _brandGreen),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Replying to ${_replyingTo!['user_name'] ?? 'report'} · ${_getIssueLabel(_replyingTo!['issue_type'] ?? 'other')}',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                              color: _brandGreen,
+                                            ),
+                                          ),
+                                          if ((_replyingTo!['notes'] ?? '')
+                                              .toString()
+                                              .isNotEmpty)
+                                            Text(
+                                              _replyingTo!['notes'].toString(),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.grey[600],
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                    GestureDetector(
+                                      onTap: _cancelReply,
+                                      child: Icon(Icons.close,
+                                          size: 18, color: Colors.grey[500]),
                                     ),
                                   ],
                                 ),
-                                child: IconButton(
-                                  icon: _isSending
-                                      ? const SizedBox(
-                                          width: 20,
-                                          height: 20,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            color: Colors.white,
-                                          ),
-                                        )
-                                      : const Icon(Icons.send_rounded, color: Colors.white),
-                                  onPressed: _isSending ? null : _sendMessage,
-                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: TextField(
+                                      controller: _messageController,
+                                      focusNode: _inputFocusNode,
+                                      enabled: !_isSending,
+                                      maxLines: null,
+                                      textCapitalization:
+                                          TextCapitalization.sentences,
+                                      decoration: InputDecoration(
+                                        hintText: 'Type your reply...',
+                                        hintStyle:
+                                            TextStyle(color: Colors.grey[400]),
+                                        filled: true,
+                                        fillColor: Colors.grey[100],
+                                        border: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(24),
+                                          borderSide: BorderSide.none,
+                                        ),
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                          horizontal: 20,
+                                          vertical: 12,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      color: _brandGreen,
+                                      shape: BoxShape.circle,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: _brandGreen.withOpacity(0.3),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: IconButton(
+                                      icon: _isSending
+                                          ? const SizedBox(
+                                              width: 20,
+                                              height: 20,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                color: Colors.white,
+                                              ),
+                                            )
+                                          : const Icon(Icons.send_rounded,
+                                              color: Colors.white),
+                                      onPressed:
+                                          _isSending ? null : _sendMessage,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
                         ),
 
-                      // ─── INFO MESSAGE WHEN ALL REPORTS ARE REPLIED ───
+                      // INFO MESSAGE WHEN ALL REPORTS ARE REPLIED 
                       if (isOperator && !hasUnrepliedReports && _reports.isNotEmpty)
                         Container(
                           padding: const EdgeInsets.all(16),
@@ -1052,4 +967,71 @@ Widget build(BuildContext context) {
               ),
   );
 }
+}
+
+
+class _SwipeToReply extends StatefulWidget {
+  final Widget child;
+  final VoidCallback onReply;
+
+  const _SwipeToReply({
+    required this.child,
+    required this.onReply,
+  });
+
+  @override
+  State<_SwipeToReply> createState() => _SwipeToReplyState();
+}
+
+class _SwipeToReplyState extends State<_SwipeToReply> {
+  static const Color _brandGreen = Color(0xFF2E7D32);
+  static const double _maxDrag = 80;
+  static const double _triggerThreshold = 55;
+
+  double _dragOffset = 0;
+  bool _triggered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onHorizontalDragUpdate: (details) {
+        setState(() {
+          _dragOffset += details.delta.dx;
+          if (_dragOffset < 0) _dragOffset = 0;
+          if (_dragOffset > _maxDrag) _dragOffset = _maxDrag;
+          _triggered = _dragOffset >= _triggerThreshold;
+        });
+      },
+      onHorizontalDragEnd: (_) {
+        if (_dragOffset >= _triggerThreshold) {
+          widget.onReply();
+        }
+        setState(() {
+          _dragOffset = 0;
+          _triggered = false;
+        });
+      },
+      child: Stack(
+        alignment: Alignment.centerLeft,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 10),
+            child: Opacity(
+              opacity: (_dragOffset / _triggerThreshold).clamp(0.0, 1.0),
+              child: CircleAvatar(
+                radius: 16,
+                backgroundColor:
+                    _triggered ? _brandGreen : _brandGreen.withOpacity(0.5),
+                child: const Icon(Icons.reply, size: 16, color: Colors.white),
+              ),
+            ),
+          ),
+          Transform.translate(
+            offset: Offset(_dragOffset, 0),
+            child: widget.child,
+          ),
+        ],
+      ),
+    );
+  }
 }

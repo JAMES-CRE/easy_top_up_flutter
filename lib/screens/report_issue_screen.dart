@@ -4,6 +4,8 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'api_service.dart';
 import 'auth_state.dart';
+import '../services/station_cache_service.dart';
+
 
 class ReportIssueScreen extends StatefulWidget {
   final Map<String, dynamic> station;
@@ -209,7 +211,12 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
         photoUrl: photoUrl,
       );
 
+      
+      // map (and reports screen) fetches the freshly-submitted report.
+      await StationCacheService.clearReports(widget.station['id'].toString());
+
       if (!mounted) return;
+
 
       setState(() {
         _isSubmitted = true;
@@ -265,7 +272,7 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ─── STATION HEADER ───
+                  // STATION HEADER
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),

@@ -415,7 +415,13 @@ BitmapDescriptor _getMarkerIcon(String type) {
 
   // BOTTOM SHEET
   void _showBottomSheet(Map<String, dynamic> station) {
+    // Refresh hook wired up by the reports card's StatefulBuilder below.
+    // Calling it re-runs _getStationReports so the report count updates after
+    // the user returns from ReportIssueScreen.
+    VoidCallback? refreshReports;
+
     showModalBottomSheet(
+
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -898,136 +904,149 @@ BitmapDescriptor _getMarkerIcon(String type) {
                       ),
                       const SizedBox(height: 10),
 
-                      // Load and display reports count
-                      FutureBuilder<List<Map<String, dynamic>>>(
-                        future: _getStationReports(station['id']),
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState ==
-                              ConnectionState.waiting) {
-                            return const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 8),
-                              child: Center(
-                                child: SizedBox(
-                                  height: 16,
-                                  width: 16,
-                                  child:
-                                      CircularProgressIndicator(strokeWidth: 2),
-                                ),
-                              ),
-                            );
-                          }
+                      // Load and display reports count.
+                      // Wrapped in StatefulBuilder so we can refresh just this
+                      // card (re-run _getStationReports) when the user returns
+                      // from ReportIssueScreen after submitting a new report.
+                      StatefulBuilder(
+                        builder: (context, setSheetState) {
+                          // Expose a refresh hook for the Report button below,
+                          // so submitting a report re-runs _getStationReports.
+                          refreshReports = () => setSheetState(() {});
+                          return FutureBuilder<List<Map<String, dynamic>>>(
+                            future: _getStationReports(station['id']),
+                            builder: (context, snapshot) {
 
-                          final reportCount =
-                              snapshot.hasData ? snapshot.data!.length : 0;
+                              if (snapshot.connectionState ==
+                                  ConnectionState.waiting) {
+                                return const Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 8),
+                                  child: Center(
+                                    child: SizedBox(
+                                      height: 16,
+                                      width: 16,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2),
+                                    ),
+                                  ),
+                                );
+                              }
 
-                          return GestureDetector(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => StationReportsScreen(
-                                    stationId: station['id'],
-                                    stationName: station['name'],
+                              final reportCount =
+                                  snapshot.hasData ? snapshot.data!.length : 0;
+
+                              return GestureDetector(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => StationReportsScreen(
+                                        stationId: station['id'],
+                                        stationName: station['name'],
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 14, horizontal: 16),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(16),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.04),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      // Leading icon
+                                      Container(
+                                        padding: const EdgeInsets.all(10),
+                                        decoration: BoxDecoration(
+                                          color: Colors.blue.shade50,
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                        ),
+                                        child: Icon(
+                                          Icons.forum_outlined,
+                                          color: Colors.blue.shade600,
+                                          size: 20,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 14),
+
+                                      // Text
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'See what others reported',
+                                              style: GoogleFonts.poppins(
+                                                textStyle: const TextStyle(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Color(0xFF1A1A1A),
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              reportCount == 0
+                                                  ? 'No reports yet'
+                                                  : '$reportCount report${reportCount == 1 ? '' : 's'} submitted',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.grey[600],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+
+                                      // Count badge (if reports exist)
+                                      if (reportCount > 0)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.blue.shade600,
+                                            borderRadius:
+                                                BorderRadius.circular(20),
+                                          ),
+                                          child: Text(
+                                            '$reportCount',
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w700,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ),
+
+                                      const SizedBox(width: 8),
+                                      Icon(
+                                        Icons.chevron_right,
+                                        color: Colors.grey[400],
+                                        size: 20,
+                                      ),
+                                    ],
                                   ),
                                 ),
                               );
                             },
-                            child: Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(
-                                  vertical: 14, horizontal: 16),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.04),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: Row(
-                                children: [
-                                  // Leading icon
-                                  Container(
-                                    padding: const EdgeInsets.all(10),
-                                    decoration: BoxDecoration(
-                                      color: Colors.blue.shade50,
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Icon(
-                                      Icons.forum_outlined,
-                                      color: Colors.blue.shade600,
-                                      size: 20,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 14),
-
-                                  // Text
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          'See what others reported',
-                                          style: GoogleFonts.poppins(
-                                            textStyle: const TextStyle(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w600,
-                                              color: Color(0xFF1A1A1A),
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          reportCount == 0
-                                              ? 'No reports yet'
-                                              : '$reportCount report${reportCount == 1 ? '' : 's'} submitted',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.grey[600],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-
-                                  // Count badge (if reports exist)
-                                  if (reportCount > 0)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 10,
-                                        vertical: 4,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.blue.shade600,
-                                        borderRadius:
-                                            BorderRadius.circular(20),
-                                      ),
-                                      child: Text(
-                                        '$reportCount',
-                                        style: const TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w700,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
-
-                                  const SizedBox(width: 8),
-                                  Icon(
-                                    Icons.chevron_right,
-                                    color: Colors.grey[400],
-                                    size: 20,
-                                  ),
-                                ],
-                              ),
-                            ),
                           );
                         },
                       ),
+
                       const SizedBox(height: 24),
                       // Phone call row
                       if (station['phone'] != null)
@@ -1161,19 +1180,26 @@ BitmapDescriptor _getMarkerIcon(String type) {
                                   ),
                                 ),
                               ),
-                              onPressed: () {
-                                Navigator.push(
+                              onPressed: () async {
+                                await Navigator.push(
                                   context,
                                   MaterialPageRoute(
                                     builder: (_) =>
                                         ReportIssueScreen(station: station),
                                   ),
                                 );
+                                // A report may have been submitted, which
+                                // invalidates the cached reports. Refresh the
+                                // reports card so the count is up to date.
+                                if (refreshReports != null) {
+                                  refreshReports!();
+                                }
                               },
                             ),
                           ),
                         ],
                       ),
+
                     ],
                   ),
                 ),
@@ -1207,19 +1233,15 @@ BitmapDescriptor _getMarkerIcon(String type) {
   // }
 
 
-  // GET STATION REPORTS  
+  // GET STATION REPORTS
+  // Serve cached reports first (for instant UI), then always fetch fresh data
+  // from the API and overwrite the cache — even when the fresh list is empty —
+  // so deletions/moderation are reflected and stale counts don't linger.
 Future<List<Map<String, dynamic>>> _getStationReports(String stationId) async {
   try {
     final token = AuthState.instance.token ?? '';
 
-    final hasCache = await StationCacheService.hasCachedReports(stationId);
-    
-    if (hasCache) {
-      final cachedReports = await StationCacheService.loadReports(stationId);
-      print('✅ Loaded ${cachedReports.length} reports from cache');
-      return cachedReports;
-    }
-
+    // Always fetch fresh data from the API.
     final response = await ApiService.getStationReports(
       stationId: stationId,
       token: token,
@@ -1231,15 +1253,18 @@ Future<List<Map<String, dynamic>>> _getStationReports(String stationId) async {
     } else if (response is Map) {
       reportsList = [response.cast<String, dynamic>()];
     }
-    if (reportsList.isNotEmpty) {
-      await StationCacheService.saveReports(stationId, reportsList);
-    }
+
+    // Overwrite the cache with fresh data (even when empty) so the count
+    // stays accurate after reports are removed on the server.
+    await StationCacheService.saveReports(stationId, reportsList);
+    print('✅ Loaded ${reportsList.length} fresh reports from API');
 
     return reportsList;
 
   } catch (e) {
     print('Error loading reports: $e');
-    
+
+    // On failure, fall back to whatever is cached.
     final cachedReports = await StationCacheService.loadReports(stationId);
     if (cachedReports.isNotEmpty) {
       print(' Using cached reports (${cachedReports.length} reports)');
@@ -1248,6 +1273,7 @@ Future<List<Map<String, dynamic>>> _getStationReports(String stationId) async {
     return [];
   }
 }
+
 
   // PETROL SECTION
   Widget _buildPetrolSection(Map<String, dynamic> petrolData) {

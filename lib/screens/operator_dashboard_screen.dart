@@ -7,6 +7,8 @@ import 'add_station_screen.dart';
 import 'edit_station_screen.dart';
 import 'station_reports_screen.dart';
 import 'operator_home_screen.dart';
+import '../services/station_cache_service.dart';
+
 
 class OperatorDashboardScreen extends StatefulWidget {
   final Map<String, dynamic>? station;
@@ -621,7 +623,13 @@ class _OperatorDashboardScreenState extends State<OperatorDashboardScreen> {
         stationId: _station!['id'],
       );
 
+      // The station (and its reports) no longer exist on the server; drop the
+      // cached reports so a stale count doesn't linger if the station id is
+      // ever reused or reloaded.
+      await StationCacheService.clearReports(_station!['id'].toString());
+
       if (!mounted) return;
+
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
